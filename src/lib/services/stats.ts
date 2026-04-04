@@ -3,8 +3,7 @@ import { DashboardStatsModel } from '@/models/Stats';
 import { DashboardStats } from '@/types';
 import { UserModel } from '@/models/User';
 import { StudentModel } from '@/models/Student';
-import { adminDb } from '../firebase/admin';
-import { COLLECTIONS } from '../constants';
+import { LeadModel } from '@/models/Lead';
 
 /**
  * Helper to get the single stats document
@@ -81,20 +80,18 @@ export async function decrementStat(
 export async function recalculateStats(): Promise<DashboardStats> {
   await dbConnect();
   
-  const usersCount = await UserModel.countDocuments({ role: 'student' });
-  const studentsCount = await StudentModel.countDocuments({ isProfileComplete: true });
-  
-  // Leads are still on Firestore for now
-  const [leadsSnap, pendingSnap] = await Promise.all([
-    adminDb.collection(COLLECTIONS.LEADS).count().get(),
-    adminDb.collection(COLLECTIONS.LEADS).where('status', 'in', ['assigned', 'in_progress']).count().get(),
+  const [usersCount, studentsCount, totalRequests, pendingCallbacks] = await Promise.all([
+    UserModel.countDocuments({ role: 'student' }),
+    StudentModel.countDocuments({ isProfileComplete: true }),
+    LeadModel.countDocuments({}),
+    LeadModel.countDocuments({ status: { $in: ['assigned', 'in_progress'] } }),
   ]);
   
   const statsUpdate = {
     totalRegistrations: usersCount,
     totalInfoFilled: studentsCount,
-    totalRequests: leadsSnap.data().count,
-    pendingCallbacks: pendingSnap.data().count,
+    totalRequests,
+    pendingCallbacks,
   };
   
   const doc = await getStatsDoc();

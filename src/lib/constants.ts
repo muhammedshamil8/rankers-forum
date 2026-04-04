@@ -1,21 +1,4 @@
 // ============================================
-// Firestore Collection Names
-// ============================================
-
-export const COLLECTIONS = {
-  USERS: 'users',
-  STUDENTS: 'students',
-  ADMIN_PROFILES: 'admin_profiles',
-  LEADS: 'leads',
-  LEAD_FOLLOWUPS: 'lead_followups',
-  LOCATIONS: 'locations',
-  COURSES: 'courses',
-  COLLEGE_RANK_CUTOFFS: 'college_rank_cutoffs',
-  EXCEL_UPLOAD_LOGS: 'excel_upload_logs',
-  DASHBOARD_STATS: 'dashboard_stats',
-} as const;
-
-// ============================================
 // Form Options
 // ============================================
 

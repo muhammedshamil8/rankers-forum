@@ -1,10 +1,8 @@
 import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
-import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
 let adminApp: App | null = null;
 let adminAuthInstance: Auth | null = null;
-let adminDbInstance: Firestore | null = null;
 
 function getFirebaseAdminApp(): App {
   if (adminApp) {
@@ -45,19 +43,12 @@ function getFirebaseAdminApp(): App {
   }
 }
 
-// Lazy getters for auth and db
+// Lazy getters for auth
 export function getAdminAuth(): Auth {
   if (!adminAuthInstance) {
     adminAuthInstance = getAuth(getFirebaseAdminApp());
   }
   return adminAuthInstance;
-}
-
-export function getAdminDb(): Firestore {
-  if (!adminDbInstance) {
-    adminDbInstance = getFirestore(getFirebaseAdminApp());
-  }
-  return adminDbInstance;
 }
 
 // Backward compatibility exports (eager initialization)
@@ -70,10 +61,4 @@ export const adminAuth = {
   get verifySessionCookie() { return getAdminAuth().verifySessionCookie.bind(getAdminAuth()); },
   get createSessionCookie() { return getAdminAuth().createSessionCookie.bind(getAdminAuth()); },
   get revokeRefreshTokens() { return getAdminAuth().revokeRefreshTokens.bind(getAdminAuth()); },
-};
-
-export const adminDb = {
-  get collection() { return getAdminDb().collection.bind(getAdminDb()); },
-  get batch() { return getAdminDb().batch.bind(getAdminDb()); },
-  get runTransaction() { return getAdminDb().runTransaction.bind(getAdminDb()); },
 };
