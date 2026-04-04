@@ -209,7 +209,7 @@ export function LoginModal({
               onClick={onRegisterClick}
               className="text-indigo-600 hover:text-indigo-700 font-semibold"
             >
-              Register!
+              Register
             </button>
           </p>
         </form>

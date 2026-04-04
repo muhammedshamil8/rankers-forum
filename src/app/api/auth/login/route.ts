@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, getAdminDb } from '@/lib/firebase/admin';
+import { adminAuth } from '@/lib/firebase/admin';
 import { getUserById, createUser } from '@/lib/services/users';
 import { getStudentByUserId } from '@/lib/services/students';
-import { COLLECTIONS } from '@/lib/constants';
-import { Timestamp } from 'firebase-admin/firestore';
 import { initializeStats, incrementStat } from '@/lib/services/stats';
 
 export async function POST(request: NextRequest) {
@@ -35,11 +33,8 @@ export async function POST(request: NextRequest) {
       const firstName = nameParts[0] || 'User';
       const lastName = nameParts.slice(1).join(' ') || '';
 
-      const now = Timestamp.now();
-      const db = getAdminDb();
-      
-      // Create user document
-      await db.collection(COLLECTIONS.USERS).doc(uid).set({
+      // Create user document using MongoDB service
+      await createUser(uid, {
         role: 'student',
         firstName,
         lastName,
@@ -47,10 +42,6 @@ export async function POST(request: NextRequest) {
         phone: firebaseUser.phoneNumber || '',
         city: '',
         state: '',
-        isActive: true,
-        avatarUrl: firebaseUser.photoURL || null,
-        createdAt: now,
-        updatedAt: now,
       });
 
       // Increment registration stats

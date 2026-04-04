@@ -18,7 +18,6 @@ interface College {
   collegeName: string;
   collegeLocation: string;
   type: string;
-  courseCode: string;
   courseName: string;
   category: string;
   rank: number;
@@ -74,7 +73,6 @@ export default function CollegePage() {
     const query = searchQuery.toLowerCase();
     return (
       college.collegeName?.toLowerCase().includes(query) ||
-      college.courseCode?.toLowerCase().includes(query) ||
       college.courseName?.toLowerCase().includes(query) ||
       college.category?.toLowerCase().includes(query) ||
       college.collegeLocation?.toLowerCase().includes(query)
@@ -143,7 +141,7 @@ export default function CollegePage() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             type="text"
-            placeholder="Search by college name, course code, course name, category, or location..."
+            placeholder="Search by college name,  course name, category, or location..."
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-10 pr-4 w-full"
@@ -160,16 +158,15 @@ export default function CollegePage() {
                 <th className="text-left px-6 py-4 font-medium rounded-tl-2xl">College Name</th>
                 <th className="text-left px-6 py-4 font-medium">Category</th>
                 <th className="text-left px-6 py-4 font-medium">Rank</th>
-                <th className="text-left px-6 py-4 font-medium">Course Code</th>
                 <th className="text-left px-6 py-4 font-medium rounded-tr-2xl">Course Name</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
-                <TableShimmer rows={6} columns={5} hasActionsColumn={false} />
+                <TableShimmer rows={6} columns={4} hasActionsColumn={false} />
               ) : filteredColleges.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16">
+                  <td colSpan={4} className="px-6 py-16">
                     <div className="flex items-center justify-center min-h-96">
                       <p className="text-slate-500 text-sm">
                         {searchQuery 
@@ -185,7 +182,6 @@ export default function CollegePage() {
                     <td className="px-6 py-4 text-sm text-slate-900">{college.collegeName}</td>
                     <td className="px-6 py-4 text-sm text-slate-600">{college.category}</td>
                     <td className="px-6 py-4 text-sm text-slate-600">{college.rank}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600 ">{college.courseCode}</td>
                     <td className="px-6 py-4 text-sm text-slate-600 uppercase">{college.courseName}</td>
                   </tr>
                 ))

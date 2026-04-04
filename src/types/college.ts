@@ -16,9 +16,12 @@ export interface CollegeRankCutoff {
   collegeName: string;
   collegeLocation: string;
   collegeType: CollegeType;
+  quota?: string;
+  city?: string;
+  state?: string;
   // Course data
   courseName: string;
-  courseCode: string;
+  courseFees?: number;
   year: number;
   category: string;
   rank: number;
@@ -49,6 +52,9 @@ export interface ExcelUploadLog {
   fileName: string;
   totalRows: number;
   processedRows: number;
+  insertedCount: number;
+  updatedCount: number;
+  skippedCount: number;
   failedRows: number;
   errorLog: string[];
   status: UploadStatus;

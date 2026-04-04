@@ -144,8 +144,15 @@ export async function PATCH(
     }
 
     return NextResponse.json({ error: 'Invalid action or missing fields' }, { status: 400 });
-  } catch (error) {
-    console.error('Update lead error:', error);
-    return NextResponse.json({ error: 'Failed to update lead' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Update lead 500 error:', {
+      message: error.message,
+      stack: error.stack,
+      id: params ? (await params).id : 'missing id'
+    });
+    return NextResponse.json({ 
+      error: 'Failed to update lead', 
+      details: error.message 
+    }, { status: 500 });
   }
 }

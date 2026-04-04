@@ -6,7 +6,7 @@ export function Footer() {
   const currentYear = 2026; // As per the image Requirement
 
   return (
-    <footer className="bg-linear-to-r from-[#2F129B] to-[#3B82F6] text-white py-10 font-sans">
+    <footer className="bg-linear-to-r from-[#2F129B] to-[#3B82F6] text-white py-10 font-sans overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
           {/* Brand and Description */}
@@ -65,9 +65,9 @@ export function Footer() {
               <p>
                 Rankers Forum <br />
                 2nd Floor, Knowledge Hub Building,<br />BTM Layout, Bengaluru,<br />Karnataka – 560076, India</p>
-              <p className="flex items-center gap-2">
+              <p className="flex items-center gap-2 text-wrap">
                 <span>Email:</span>
-                <a href="mailto:support@rankersforum.in" className="hover:text-white transition-colors">support@rankersforum.in</a>
+                <a href="mailto:support@rankersforum.in" className="hover:text-white transition-colors text-wrap">support@rankersforum.in</a>
               </p>
               <p className="flex items-center gap-2">
                 <span>Phone:</span>

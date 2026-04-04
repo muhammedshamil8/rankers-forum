@@ -75,10 +75,7 @@ export function Navbar({ user, loading, onLoginClick, onRegisterClick }: NavbarP
                             ) : (
                                 <Button
                                     onClick={onLoginClick}
-                                    className="rounded-full bg-linear-to-br from-[#2F129B]
-                                     to-[#3B82F6] text-white px-8 py-1 md:py-6 lg:text-lg font-medium 
-                                     hover:opacity-90 shadow-lg text-xs md:text-base transition-all active:scale-95 
-                                     flex items-center gap-2 border-0 h-10"
+                                    className="rounded-full bg-linear-to-br from-[#2F129B] to-[#3B82F6] text-white px-8 py-1 md:py-6 lg:text-lg font-medium hover:opacity-90 shadow-lg text-xs md:text-base transition-all active:scale-95 flex items-center gap-2 border-0 h-10"
                                 >
                                     Login
                                     <ArrowRight className="md:w-5 md:h-5 w-3 h-3" />

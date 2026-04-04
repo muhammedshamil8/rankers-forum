@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const sessionCookie = request.cookies.get('session')?.value;
 
     if (!sessionCookie) {
+      console.log('DEBUG: No session cookie found in request headers. Cookies:', request.cookies.getAll());
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }

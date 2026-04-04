@@ -1,60 +1,73 @@
-import { adminDb } from '../firebase/admin';
-import { COLLECTIONS } from '../constants';
+import dbConnect from '../mongodb';
+import { UserModel } from '@/models/User';
 import { User, CreateUserInput, UserRole } from '@/types';
-import { Timestamp, FieldValue } from 'firebase-admin/firestore';
-
-const usersCollection = adminDb.collection(COLLECTIONS.USERS);
 
 /**
- * Create a new user document in Firestore
+ * Helper to map Mongoose document to frontend User interface
+ */
+function mapUser(doc: any): User {
+  const data = doc.toObject ? doc.toObject() : doc;
+  return {
+    id: data._id.toString(),
+    role: data.role,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    email: data.email,
+    phone: data.phone,
+    city: data.city,
+    state: data.state,
+    isActive: data.isActive,
+    avatarUrl: data.avatarUrl,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+  } as User;
+}
+
+/**
+ * Create a new user document in MongoDB
  */
 export async function createUser(
   uid: string,
   data: CreateUserInput
 ): Promise<User> {
-  const now = Timestamp.now();
+  await dbConnect();
   
-  const user: Omit<User, 'id'> = {
+  const user = await UserModel.create({
+    _id: uid,
     ...data,
     isActive: true,
     avatarUrl: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  await usersCollection.doc(uid).set(user);
+  });
   
-  return { id: uid, ...user } as User;
+  return mapUser(user);
 }
 
 /**
  * Get a user by their UID
  */
 export async function getUserById(uid: string): Promise<User | null> {
-  const doc = await usersCollection.doc(uid).get();
+  await dbConnect();
   
-  if (!doc.exists) {
+  const user = await UserModel.findById(uid);
+  if (!user) {
     return null;
   }
   
-  return { id: doc.id, ...doc.data() } as User;
+  return mapUser(user);
 }
 
 /**
  * Get a user by their email
  */
 export async function getUserByEmail(email: string): Promise<User | null> {
-  const snapshot = await usersCollection
-    .where('email', '==', email)
-    .limit(1)
-    .get();
+  await dbConnect();
   
-  if (snapshot.empty) {
+  const user = await UserModel.findOne({ email });
+  if (!user) {
     return null;
   }
   
-  const doc = snapshot.docs[0];
-  return { id: doc.id, ...doc.data() } as User;
+  return mapUser(user);
 }
 
 /**
@@ -64,10 +77,8 @@ export async function updateUser(
   uid: string,
   data: Partial<Omit<User, 'id' | 'createdAt'>>
 ): Promise<void> {
-  await usersCollection.doc(uid).update({
-    ...data,
-    updatedAt: Timestamp.now(),
-  });
+  await dbConnect();
+  await UserModel.findByIdAndUpdate(uid, data);
 }
 
 /**
@@ -77,52 +88,40 @@ export async function updateUserRole(
   uid: string,
   role: UserRole
 ): Promise<void> {
-  await usersCollection.doc(uid).update({
-    role,
-    updatedAt: Timestamp.now(),
-  });
+  await dbConnect();
+  await UserModel.findByIdAndUpdate(uid, { role });
 }
 
 /**
  * Deactivate a user account
  */
 export async function deactivateUser(uid: string): Promise<void> {
-  await usersCollection.doc(uid).update({
-    isActive: false,
-    updatedAt: Timestamp.now(),
-  });
+  await dbConnect();
+  await UserModel.findByIdAndUpdate(uid, { isActive: false });
 }
 
 /**
  * Activate a user account
  */
 export async function activateUser(uid: string): Promise<void> {
-  await usersCollection.doc(uid).update({
-    isActive: true,
-    updatedAt: Timestamp.now(),
-  });
+  await dbConnect();
+  await UserModel.findByIdAndUpdate(uid, { isActive: true });
 }
 
 /**
  * Get all users by role
  */
 export async function getUsersByRole(role: UserRole): Promise<User[]> {
-  const snapshot = await usersCollection
-    .where('role', '==', role)
-    .orderBy('createdAt', 'desc')
-    .get();
+  await dbConnect();
   
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+  const users = await UserModel.find({ role }).sort({ createdAt: -1 });
+  return users.map(mapUser);
 }
 
 /**
  * Count users by role
  */
 export async function countUsersByRole(role: UserRole): Promise<number> {
-  const snapshot = await usersCollection
-    .where('role', '==', role)
-    .count()
-    .get();
-  
-  return snapshot.data().count;
+  await dbConnect();
+  return UserModel.countDocuments({ role });
 }

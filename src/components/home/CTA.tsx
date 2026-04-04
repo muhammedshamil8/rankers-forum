@@ -19,8 +19,7 @@ export function CTA({ onAction }: CTAProps) {
                 <Button
                     size="lg"
                     variant="outline"
-                    className="bg-white text-[#3B82F6] border-white rounded-full
-                     hover:bg-indigo-50 h-14 px-8 text-base shadow-lg hover:shadow-xl transition-all"
+                    className="bg-white text-[#3B82F6] border-white rounded-full hover:bg-indigo-50 h-14 px-8 text-base shadow-lg hover:shadow-xl transition-all"
                     onClick={onAction}
                 >
                     Request a Callback

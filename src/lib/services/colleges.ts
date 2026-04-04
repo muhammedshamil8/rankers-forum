@@ -1,16 +1,11 @@
-import { adminDb } from '../firebase/admin';
-import { COLLECTIONS } from '../constants';
+import dbConnect from '../mongodb';
+import { CollegeCutoffModel } from '@/models/CollegeCutoff';
 import {
   CollegeRankCutoff,
   CollegeWithChance,
   ChanceLevel,
   CollegeType,
 } from '@/types';
-import { Timestamp } from 'firebase-admin/firestore';
-
-const cutoffsCollection = adminDb.collection(COLLECTIONS.COLLEGE_RANK_CUTOFFS);
-const locationsCollection = adminDb.collection(COLLECTIONS.LOCATIONS);
-const coursesCollection = adminDb.collection(COLLECTIONS.COURSES);
 
 // ============================================
 // Chance Calculation
@@ -49,60 +44,89 @@ export function getChanceLabel(chance: ChanceLevel): string {
 // ============================================
 
 /**
- * Bulk create cutoffs using batched writes
+ * Bulk create cutoffs using MongoDB insertMany for performance
  */
 export async function bulkCreateCutoffs(
   cutoffs: Omit<CollegeRankCutoff, 'id' | 'createdAt'>[]
 ): Promise<number> {
-  const BATCH_SIZE = 500;
-  const now = Timestamp.now();
-  let totalWritten = 0;
-
-  for (let i = 0; i < cutoffs.length; i += BATCH_SIZE) {
-    const batch = adminDb.batch();
-    const chunk = cutoffs.slice(i, i + BATCH_SIZE);
-
-    for (const cutoff of chunk) {
-      const docRef = cutoffsCollection.doc();
-      batch.set(docRef, {
-        ...cutoff,
-        createdAt: now,
-      });
+  await dbConnect();
+  if (cutoffs.length === 0) return 0;
+  
+  try {
+    // Use the native MongoDB collection for a faster, more reliable bulk insert
+    const collection = CollegeCutoffModel.collection;
+    const result = await collection.insertMany(cutoffs, { ordered: false });
+    return result.insertedCount || 0;
+  } catch (error: any) {
+    // If it's a bulk write error, check how many were actually inserted
+    if (error.result && error.result.insertedCount) {
+      console.log(`DEBUG: Bulk write had partial success: ${error.result.insertedCount} inserted.`);
+      return error.result.insertedCount;
     }
+    console.error('DEBUG: Native bulk insert failed completely:', error);
+    return 0;
+  }
+}
 
-    await batch.commit();
-    totalWritten += chunk.length;
+/**
+ * Bulk upsert cutoffs using MongoDB bulkWrite
+ * This is more efficient for updates + inserts
+ */
+export async function bulkUpsertCutoffs(
+  operations: any[]
+): Promise<{ insertedCount: number; modifiedCount: number; upsertedCount: number }> {
+  await dbConnect();
+  if (operations.length === 0) {
+    return { insertedCount: 0, modifiedCount: 0, upsertedCount: 0 };
   }
 
-  return totalWritten;
+  try {
+    const collection = CollegeCutoffModel.collection;
+    const result = await collection.bulkWrite(operations, { ordered: false });
+    
+    return {
+      insertedCount: result.insertedCount || 0,
+      modifiedCount: result.modifiedCount || 0,
+      upsertedCount: result.upsertedCount || 0,
+    };
+  } catch (error: any) {
+    console.error('DEBUG: Bulk write failed:', error);
+    // Even if it failed, some might have succeeded
+    if (error.result) {
+      return {
+        insertedCount: error.result.insertedCount || 0,
+        modifiedCount: error.result.modifiedCount || 0,
+        upsertedCount: error.result.upsertedCount || 0,
+      };
+    }
+    return { insertedCount: 0, modifiedCount: 0, upsertedCount: 0 };
+  }
 }
+
+// ============================================
+// Constants and Mappings
+// ============================================
+
+const CATEGORY_MAPPING: Record<string, string[] | RegExp> = {
+  general: ['GM', 'GMH', 'GMK', 'GMKH', 'GMR', 'GMRH', 'OPN'],
+  obc: /^(1|2A|2B|3A|3B)/i,
+  sc: /^SC/i,
+  st: /^ST/i,
+  ews: /^EWS/i,
+};
+
+const QUOTA_MAPPING: Record<string, string[]> = {
+  state: ['GOVT', 'PRIV', 'GOVERNMENT', 'PRIVATE'],
+  all_india: ['AIQ', 'GOVT', 'ALL INDIA'],
+};
 
 /**
  * Delete all cutoffs for a specific year
  */
 export async function deleteCutoffsByYear(year: number): Promise<number> {
-  const BATCH_SIZE = 500;
-  let totalDeleted = 0;
-
-  const snapshot = await cutoffsCollection
-    .where('year', '==', year)
-    .get();
-
-  const docs = snapshot.docs;
-
-  for (let i = 0; i < docs.length; i += BATCH_SIZE) {
-    const batch = adminDb.batch();
-    const chunk = docs.slice(i, i + BATCH_SIZE);
-
-    for (const doc of chunk) {
-      batch.delete(doc.ref);
-    }
-
-    await batch.commit();
-    totalDeleted += chunk.length;
-  }
-
-  return totalDeleted;
+  await dbConnect();
+  const res = await CollegeCutoffModel.deleteMany({ year });
+  return res.deletedCount || 0;
 }
 
 /**
@@ -116,30 +140,82 @@ export async function getEligibleColleges(options: {
   quota?: string;
   collegeType?: CollegeType;
   locations?: string[];
+  disableYearFallback?: boolean;
 }): Promise<{ primary: CollegeWithChance[]; others: CollegeWithChance[] }> {
-  let baseQuery = cutoffsCollection
-    .where('courseName', '==', options.courseName)
-    .where('year', '==', options.year)
-    // .where('category', '==', options.category)
-    .where('rank', '>=', options.studentRank)
-    .orderBy('rank')
-    .limit(300);
+  // Normalize inputs
+  const categorySearch = options.category.toLowerCase();
+  const quotaSearch = options.quota?.toLowerCase() || '';
 
-  if (options.collegeType) {
-    baseQuery = baseQuery.where('collegeType', '==', options.collegeType);
+  // Get mapped filters
+  const categoryFilter = CATEGORY_MAPPING[categorySearch] || options.category;
+  const quotaFilter = QUOTA_MAPPING[quotaSearch] || options.quota;
+
+  // Year fallback: if no data for requested year, get the latest year available for this category
+  let targetYear = options.year;
+  
+  // Use a flexible query for the initial check to account for mapping
+  const checkQuery: any = { year: targetYear };
+  if (categoryFilter instanceof RegExp) {
+    checkQuery.category = categoryFilter;
+  } else if (Array.isArray(categoryFilter)) {
+    checkQuery.category = { $in: categoryFilter };
+  } else {
+    checkQuery.category = new RegExp(`^${categoryFilter}$`, 'i');
   }
 
-  let query = baseQuery;
-  if (options.locations && options.locations.length > 0) {
-    query = baseQuery.where('collegeLocation', 'in', options.locations);
+  const initialCheck = await CollegeCutoffModel.findOne(checkQuery);
+  
+  if (!initialCheck && !options.disableYearFallback) {
+    const latestYearDoc = await CollegeCutoffModel.findOne({ 
+      category: checkQuery.category 
+    }).sort({ year: -1 });
+    
+    if (latestYearDoc) {
+      targetYear = latestYearDoc.year;
+      console.log(`DEBUG: Falling back from year ${options.year} to ${targetYear} as no records found`);
+    }
   }
 
-  let snapshot = await query.get();
+  const query: any = {
+    courseName: { $regex: new RegExp(`^${options.courseName}$`, 'i') },
+    year: targetYear,
+    rank: { $gte: options.studentRank },
+  };
+
+  // Apply mapped category filter
+  if (categoryFilter instanceof RegExp) {
+    query.category = categoryFilter;
+  } else if (Array.isArray(categoryFilter)) {
+    query.category = { $in: categoryFilter };
+  } else {
+    query.category = new RegExp(`^${categoryFilter}$`, 'i');
+  }
+
+  // Apply mapped quota filter
+  if (quotaFilter) {
+    if (Array.isArray(quotaFilter)) {
+      query.quota = { $in: quotaFilter.map(q => new RegExp(`^${q}$`, 'i')) };
+    } else {
+      query.quota = new RegExp(`^${quotaFilter}$`, 'i');
+    }
+  }
+
+  const locationsQuery = { ...query };
   let isFallback = false;
 
+  if (options.locations && options.locations.length > 0) {
+    locationsQuery.collegeLocation = { $in: options.locations };
+  }
+
+  let docs = await CollegeCutoffModel.find(locationsQuery)
+    .sort({ rank: 1 })
+    .limit(300);
+
   // If we have location constraints and found few results, try without location constraints
-  if (snapshot.size < 30 && options.locations && options.locations.length > 0) {
-    snapshot = await baseQuery.get();
+  if (docs.length < 30 && options.locations && options.locations.length > 0) {
+    docs = await CollegeCutoffModel.find(query)
+      .sort({ rank: 1 })
+      .limit(300);
     isFallback = true;
   }
 
@@ -147,18 +223,17 @@ export async function getEligibleColleges(options: {
   const others: CollegeWithChance[] = [];
   const locationSet = options.locations ? new Set(options.locations) : null;
 
-  snapshot.docs.forEach(doc => {
-    const data = doc.data() as Omit<CollegeRankCutoff, 'id'>;
+  docs.forEach(doc => {
+    const data = doc.toObject();
     const chance = calculateChance(options.studentRank, data.rank);
 
     const college = {
-      id: doc.id,
+      id: doc._id.toString(),
       ...data,
       chance,
       chanceLabel: getChanceLabel(chance),
     } as CollegeWithChance;
 
-    // Distribute to primary or others list
     if (options.locations && options.locations.length > 0) {
       if (isFallback) {
         if (locationSet?.has(data.collegeLocation)) {
@@ -180,7 +255,6 @@ export async function getEligibleColleges(options: {
 /**
  * Get previous year cutoffs for a student's rank
  */
-
 interface PreviousYearCutoffs {
   colleges: CollegeWithChance[];
   otherColleges: CollegeWithChance[];
@@ -207,9 +281,10 @@ export async function getPreviousYearCutoffs(options: {
       year,
       collegeType: options.collegeType,
       locations: options.locations,
+      disableYearFallback: true,
     });
 
-    results[year] = {colleges: primary, otherColleges: others, totalCount: primary.length + others.length};
+    results[year] = { colleges: primary, otherColleges: others, totalCount: primary.length + others.length };
   }
 
   return results;
@@ -219,28 +294,25 @@ export async function getPreviousYearCutoffs(options: {
  * Get cutoffs by year for admin view
  */
 export async function getCutoffsByYear(year: number): Promise<CollegeRankCutoff[]> {
-  const snapshot = await cutoffsCollection
-    .where('year', '==', year)
-    .get();
+  await dbConnect();
+  const docs = await CollegeCutoffModel.find({ year });
 
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CollegeRankCutoff));
+  return docs.map(doc => {
+    const obj = doc.toObject();
+    return {
+      id: doc._id.toString(),
+      ...obj
+    } as CollegeRankCutoff;
+  });
 }
 
 /**
  * Get distinct years available in the cutoffs data
  */
 export async function getAvailableYears(): Promise<number[]> {
-  const snapshot = await cutoffsCollection
-    .orderBy('year', 'desc')
-    .limit(100)
-    .get();
-
-  const years = new Set<number>();
-  snapshot.docs.forEach(doc => {
-    years.add((doc.data() as CollegeRankCutoff).year);
-  });
-
-  return Array.from(years).sort((a, b) => b - a);
+  await dbConnect();
+  const years = await CollegeCutoffModel.distinct('year');
+  return years.sort((a, b) => b - a);
 }
 
 // ============================================
@@ -254,56 +326,26 @@ export interface Location {
 }
 
 /**
- * Sync locations - clear existing and add new ones from the upload
+ * Sync locations - Deprecated in MongoDB as distinct aggregations handle this transparently
  */
 export async function syncLocations(locationNames: string[]): Promise<number> {
-  const BATCH_SIZE = 500;
-
-  // Get unique, non-empty locations
-  const uniqueLocations = [...new Set(locationNames.filter(l => l && l.trim()))];
-
-  // Clear existing locations
-  const existingSnapshot = await locationsCollection.get();
-  for (let i = 0; i < existingSnapshot.docs.length; i += BATCH_SIZE) {
-    const batch = adminDb.batch();
-    const chunk = existingSnapshot.docs.slice(i, i + BATCH_SIZE);
-    for (const doc of chunk) {
-      batch.delete(doc.ref);
-    }
-    await batch.commit();
-  }
-
-  // Add new locations
-  for (let i = 0; i < uniqueLocations.length; i += BATCH_SIZE) {
-    const batch = adminDb.batch();
-    const chunk = uniqueLocations.slice(i, i + BATCH_SIZE);
-
-    for (const name of chunk) {
-      const docRef = locationsCollection.doc();
-      batch.set(docRef, {
-        name: name.trim(),
-        isActive: true,
-      });
-    }
-
-    await batch.commit();
-  }
-
-  return uniqueLocations.length;
+  return locationNames.length;
 }
 
 /**
- * Get all active locations
+ * Get all active locations using native distinct querying
  */
 export async function getLocations(): Promise<Location[]> {
-  const snapshot = await locationsCollection
-    .where('isActive', '==', true)
-    .get();
-
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-  } as Location));
+  await dbConnect();
+  const rawLocations = await CollegeCutoffModel.distinct('collegeLocation');
+  
+  return rawLocations
+    .filter(name => name)
+    .map((name, i) => ({
+      id: `loc-${i}`,
+      name,
+      isActive: true,
+    }));
 }
 
 // ============================================
@@ -317,54 +359,24 @@ export interface Course {
 }
 
 /**
- * Sync courses - check existing and add new ones from the upload
+ * Sync courses - Deprecated in MongoDB as distinct aggregations handle this transparently
  */
 export async function syncCourses(courseNames: string[]): Promise<number> {
-  const BATCH_SIZE = 500;
-
-  // Get unique, non-empty courses
-  const uniqueCourses = [...new Set(courseNames.filter(l => l && l.trim()))];
-
-  // Clear existing courses
-  const existingSnapshot = await coursesCollection.get();
-  for (let i = 0; i < existingSnapshot.docs.length; i += BATCH_SIZE) {
-    const batch = adminDb.batch();
-    const chunk = existingSnapshot.docs.slice(i, i + BATCH_SIZE);
-    for (const doc of chunk) {
-      batch.delete(doc.ref);
-    }
-    await batch.commit();
-  }
-
-  // Add new courses
-  for (let i = 0; i < uniqueCourses.length; i += BATCH_SIZE) {
-    const batch = adminDb.batch();
-    const chunk = uniqueCourses.slice(i, i + BATCH_SIZE);
-
-    for (const name of chunk) {
-      const docRef = coursesCollection.doc();
-      batch.set(docRef, {
-        name: name.trim(),
-        isActive: true,
-      });
-    }
-
-    await batch.commit();
-  }
-
-  return uniqueCourses.length;
+  return courseNames.length;
 }
 
 /**
- * Get all active courses
+ * Get all active courses using native distinct querying
  */
 export async function getCourses(): Promise<Course[]> {
-  const snapshot = await coursesCollection
-    .where('isActive', '==', true)
-    .get();
-
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-  } as Course));
+  await dbConnect();
+  const rawCourses = await CollegeCutoffModel.distinct('courseName');
+  
+  return rawCourses
+    .filter(name => name)
+    .map((name, i) => ({
+      id: `course-${i}`,
+      name,
+      isActive: true,
+    }));
 }

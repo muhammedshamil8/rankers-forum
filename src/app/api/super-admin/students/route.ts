@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminAuth } from '@/lib/firebase/admin';
 import { getUserById } from '@/lib/services/users';
-import { COLLECTIONS } from '@/lib/constants';
+import dbConnect from '@/lib/mongodb';
+import { UserModel } from '@/models/User';
+import { StudentModel } from '@/models/Student';
+import { LeadModel } from '@/models/Lead';
 
 /**
  * Helper to verify super admin session
@@ -42,41 +45,44 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const stateFilter = searchParams.get('state');
 
-    // Get all users with student role
-    const usersCollection = adminDb.collection(COLLECTIONS.USERS);
-    const studentsCollection = adminDb.collection(COLLECTIONS.STUDENTS);
-    const leadsCollection = adminDb.collection(COLLECTIONS.LEADS);
+    await dbConnect();
 
     // Query users with student role
-    let usersQuery = usersCollection.where('role', '==', 'student');
+    let usersQuery: any = { role: 'student' };
 
     if (stateFilter && stateFilter !== 'all') {
-      usersQuery = usersQuery.where('state', '==', stateFilter);
+      usersQuery.state = stateFilter;
     }
 
-    const usersSnapshot = await usersQuery.get();
+    const users = await UserModel.find(usersQuery);
+    const userIds = users.map(u => u._id.toString());
 
-    const students = [];
+    // Fetch batch student profiles to avoid N+1 queries
+    const studentProfiles = await StudentModel.find({ userId: { $in: userIds } });
+    const studentMap = new Map();
+    studentProfiles.forEach(s => studentMap.set(s.userId.toString(), s));
 
-    for (const userDoc of usersSnapshot.docs) {
-      const userData = userDoc.data();
+    // Fetch batch leads
+    const activeLeads = await LeadModel.find({
+      studentId: { $in: userIds },
+      callbackRequested: true
+    });
+    
+    const leadMap = new Map();
+    activeLeads.forEach(l => {
+      if (!leadMap.has(l.studentId.toString())) {
+        leadMap.set(l.studentId.toString(), l);
+      }
+    });
 
-      // Get student profile
-      const studentDoc = await studentsCollection.doc(userDoc.id).get();
-      const studentData = studentDoc.exists ? studentDoc.data() : null;
+    const students = users.map(userDoc => {
+      const userData = userDoc.toObject();
+      const studentData = studentMap.get(userData._id.toString())?.toObject() || null;
+      const callbackSnapshot = leadMap.get(userData._id.toString());
 
-      // Check if student has any callback request
-      const callbackSnapshot = await leadsCollection
-        .where('studentId', '==', userDoc.id)
-        .where('callbackRequested', '==', true)
-        .limit(1)
-        .get();
-
-      const hasCallback = !callbackSnapshot.empty;
-
-      students.push({
-        id: userDoc.id,
-        userId: userDoc.id,
+      return {
+        id: userData._id.toString(),
+        userId: userData._id.toString(),
         firstName: userData.firstName || '',
         lastName: userData.lastName || '',
         email: userData.email || '',
@@ -96,10 +102,10 @@ export async function GET(request: NextRequest) {
           studentData?.locationPreference2,
           studentData?.locationPreference3,
         ].filter(Boolean),
-        hasCallback,
-        leadId: !callbackSnapshot.empty ? callbackSnapshot.docs[0].id : null,
-      });
-    }
+        hasCallback: !!callbackSnapshot,
+        leadId: callbackSnapshot ? callbackSnapshot._id.toString() : null,
+      };
+    });
 
     return NextResponse.json({ students });
   } catch (error) {

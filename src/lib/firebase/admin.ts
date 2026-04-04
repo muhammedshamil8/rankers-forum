@@ -64,6 +64,7 @@ export function getAdminDb(): Firestore {
 export const adminAuth = {
   get createUser() { return getAdminAuth().createUser.bind(getAdminAuth()); },
   get getUser() { return getAdminAuth().getUser.bind(getAdminAuth()); },
+  get deleteUser() { return getAdminAuth().deleteUser.bind(getAdminAuth()); },
   get createCustomToken() { return getAdminAuth().createCustomToken.bind(getAdminAuth()); },
   get verifyIdToken() { return getAdminAuth().verifyIdToken.bind(getAdminAuth()); },
   get verifySessionCookie() { return getAdminAuth().verifySessionCookie.bind(getAdminAuth()); },

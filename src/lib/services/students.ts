@@ -1,10 +1,33 @@
-import { adminDb } from '../firebase/admin';
-import { COLLECTIONS, MAX_COLLEGE_CHECKS } from '../constants';
+import dbConnect from '../mongodb';
+import { StudentModel } from '@/models/Student';
+import { DashboardStatsModel } from '@/models/Stats';
 import { Student, CreateStudentInput } from '@/types';
-import { Timestamp, FieldValue } from 'firebase-admin/firestore';
+import { MAX_COLLEGE_CHECKS } from '../constants';
 
-const studentsCollection = adminDb.collection(COLLECTIONS.STUDENTS);
-const statsDoc = adminDb.collection(COLLECTIONS.DASHBOARD_STATS).doc('global');
+/**
+ * Helper to map Mongoose document to frontend Student interface
+ */
+function mapStudent(doc: any): Student {
+  const data = doc.toObject ? doc.toObject() : doc;
+  return {
+    userId: data.userId.toString(),
+    rank: data.rank,
+    yearOfPassing: data.yearOfPassing,
+    category: data.category,
+    gender: data.gender,
+    institution: data.institution,
+    domicileState: data.domicileState,
+    counsellingType: data.counsellingType,
+    preferredBranch: data.preferredBranch,
+    locationPreference1: data.locationPreference1,
+    locationPreference2: data.locationPreference2,
+    locationPreference3: data.locationPreference3,
+    checksUsed: data.checksUsed,
+    isProfileComplete: data.isProfileComplete,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+  } as Student;
+}
 
 /**
  * Create a new student profile
@@ -13,43 +36,45 @@ export async function createStudent(
   userId: string,
   data: CreateStudentInput
 ): Promise<Student> {
-  const now = Timestamp.now();
+  await dbConnect();
   
-  const student: Omit<Student, 'userId'> = {
+  const student = await StudentModel.create({
+    userId,
     ...data,
     checksUsed: 0,
     isProfileComplete: true,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  // Use batch to update student and stats atomically
-  const batch = adminDb.batch();
-  
-  batch.set(studentsCollection.doc(userId), student);
+  });
   
   // Increment totalInfoFilled in stats
-  batch.update(statsDoc, {
-    totalInfoFilled: FieldValue.increment(1),
-    updatedAt: now,
-  });
-
-  await batch.commit();
+  let statsDoc = await DashboardStatsModel.findOne();
+  if (!statsDoc) {
+    statsDoc = await DashboardStatsModel.create({
+      totalRegistrations: 0,
+      totalInfoFilled: 0,
+      totalRequests: 0,
+      pendingCallbacks: 0,
+    });
+  }
   
-  return { userId, ...student } as Student;
+  await DashboardStatsModel.findByIdAndUpdate(statsDoc._id, {
+    $inc: { totalInfoFilled: 1 }
+  });
+  
+  return mapStudent(student);
 }
 
 /**
  * Get a student by their user ID
  */
 export async function getStudentByUserId(userId: string): Promise<Student | null> {
-  const doc = await studentsCollection.doc(userId).get();
+  await dbConnect();
   
-  if (!doc.exists) {
+  const doc = await StudentModel.findOne({ userId });
+  if (!doc) {
     return null;
   }
   
-  return { userId: doc.id, ...doc.data() } as Student;
+  return mapStudent(doc);
 }
 
 /**
@@ -59,10 +84,8 @@ export async function updateStudent(
   userId: string,
   data: Partial<Omit<Student, 'userId' | 'createdAt' | 'checksUsed'>>
 ): Promise<void> {
-  await studentsCollection.doc(userId).update({
-    ...data,
-    updatedAt: Timestamp.now(),
-  });
+  await dbConnect();
+  await StudentModel.findOneAndUpdate({ userId }, data);
 }
 
 /**
@@ -70,7 +93,8 @@ export async function updateStudent(
  * Returns false if max checks already reached
  */
 export async function incrementChecksUsed(userId: string): Promise<boolean> {
-  const student = await getStudentByUserId(userId);
+  await dbConnect();
+  const student = await StudentModel.findOne({ userId });
   
   if (!student) {
     throw new Error('Student not found');
@@ -80,11 +104,8 @@ export async function incrementChecksUsed(userId: string): Promise<boolean> {
     return false;
   }
   
-  await studentsCollection.doc(userId).update({
-    checksUsed: student.checksUsed + 1,
-    updatedAt: Timestamp.now(),
-  });
-  
+  student.checksUsed += 1;
+  await student.save();
   return true;
 }
 
@@ -92,7 +113,8 @@ export async function incrementChecksUsed(userId: string): Promise<boolean> {
  * Check if a student can perform more college lookups
  */
 export async function canPerformLookup(userId: string): Promise<boolean> {
-  const student = await getStudentByUserId(userId);
+  await dbConnect();
+  const student = await StudentModel.findOne({ userId });
   
   if (!student) {
     return false;
@@ -105,7 +127,8 @@ export async function canPerformLookup(userId: string): Promise<boolean> {
  * Get remaining checks for a student
  */
 export async function getRemainingChecks(userId: string): Promise<number> {
-  const student = await getStudentByUserId(userId);
+  await dbConnect();
+  const student = await StudentModel.findOne({ userId });
   
   if (!student) {
     return 0;
@@ -121,38 +144,34 @@ export async function getStudents(
   limit: number = 20,
   startAfter?: string
 ): Promise<Student[]> {
-  let query = studentsCollection
-    .orderBy('createdAt', 'desc')
-    .limit(limit);
+  await dbConnect();
+  
+  let query = StudentModel.find().sort({ createdAt: -1 }).limit(limit);
   
   if (startAfter) {
-    const startDoc = await studentsCollection.doc(startAfter).get();
-    if (startDoc.exists) {
-      query = query.startAfter(startDoc);
+    const startDoc = await StudentModel.findOne({ userId: startAfter });
+    if (startDoc) {
+      // Find documents created strictly before the startAfter document
+      query = query.where('createdAt').lt(startDoc.createdAt);
     }
   }
   
-  const snapshot = await query.get();
-  
-  return snapshot.docs.map(doc => ({ userId: doc.id, ...doc.data() } as Student));
+  const snapshot = await query.exec();
+  return snapshot.map(mapStudent);
 }
 
 /**
  * Count total students
  */
 export async function countStudents(): Promise<number> {
-  const snapshot = await studentsCollection.count().get();
-  return snapshot.data().count;
+  await dbConnect();
+  return StudentModel.countDocuments();
 }
 
 /**
  * Count students with complete profiles
  */
 export async function countCompletedProfiles(): Promise<number> {
-  const snapshot = await studentsCollection
-    .where('isProfileComplete', '==', true)
-    .count()
-    .get();
-  
-  return snapshot.data().count;
+  await dbConnect();
+  return StudentModel.countDocuments({ isProfileComplete: true });
 }

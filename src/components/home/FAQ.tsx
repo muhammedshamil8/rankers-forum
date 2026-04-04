@@ -42,8 +42,7 @@ export function FAQ() {
                                 </div>
                             </button>
                             <div
-                                className={`px-6 overflow-hidden transition-all duration-300 ease-in-out ${activeAccordion === index ? 'max-h-96 pb-6' : 'max-h-0'
-                                    }`}
+                                className={`px-6 overflow-hidden transition-all duration-300 ease-in-out ${activeAccordion === index ? 'max-h-96 pb-6' : 'max-h-0'}`}
                             >
                                 <p className="text-slate-600 text-sm md:text-lg leading-relaxed">
                                     {faq.answer}

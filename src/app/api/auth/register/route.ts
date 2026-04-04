@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { COLLECTIONS } from '@/lib/constants';
-import { Timestamp } from 'firebase-admin/firestore';
+import { adminAuth } from '@/lib/firebase/admin';
 import { incrementStat, initializeStats } from '@/lib/services/stats';
+import { createUser } from '@/lib/services/users';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,10 +23,8 @@ export async function POST(request: NextRequest) {
       displayName: `${firstName} ${lastName}`,
     });
 
-    const now = Timestamp.now();
-
-    // Create user document in Firestore
-    await adminDb.collection(COLLECTIONS.USERS).doc(userRecord.uid).set({
+    // Create user document in MongoDB using updated service
+    await createUser(userRecord.uid, {
       role: 'student',
       firstName,
       lastName,
@@ -35,10 +32,6 @@ export async function POST(request: NextRequest) {
       phone,
       city: city || '',
       state: state || '',
-      isActive: true,
-      avatarUrl: null,
-      createdAt: now,
-      updatedAt: now,
     });
 
     // Initialize stats if needed and increment registration count

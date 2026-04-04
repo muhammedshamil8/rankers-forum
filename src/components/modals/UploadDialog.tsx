@@ -193,7 +193,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
               Your Excel file should contain the following columns:
             </p>
             <div className="flex flex-wrap gap-2">
-              {['College Name', 'Category', 'Course Name', 'Course Code', 'Rank', 'Fee'].map((col) => (
+              {['College Name', 'Category', 'Course Name', 'Rank', 'Fee'].map((col) => (
                 <Badge key={col} variant="secondary" className="text-xs">
                   {col}
                 </Badge>

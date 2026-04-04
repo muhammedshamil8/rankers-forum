@@ -300,7 +300,7 @@ export function RegisterModal({
                 onClick={onLoginClick}
                 className="text-indigo-600 hover:text-indigo-700 font-semibold"
               >
-                Log in!
+                Log in
               </button>
             </p>
           </form>

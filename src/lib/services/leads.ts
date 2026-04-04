@@ -1,56 +1,89 @@
-import { adminDb } from '../firebase/admin';
-import { COLLECTIONS } from '../constants';
+import dbConnect from '../mongodb';
+import { LeadModel, LeadFollowupModel } from '@/models/Lead';
+import { AdminProfileModel } from '@/models/AdminProfile';
+import { DashboardStatsModel } from '@/models/Stats';
 import { Lead, CreateLeadInput, LeadStatus, LeadFollowup, CreateFollowupInput } from '@/types';
-import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 
-const leadsCollection = adminDb.collection(COLLECTIONS.LEADS);
-const followupsCollection = adminDb.collection(COLLECTIONS.LEAD_FOLLOWUPS);
-const statsDoc = adminDb.collection(COLLECTIONS.DASHBOARD_STATS).doc('global');
-const adminsCollection = adminDb.collection(COLLECTIONS.ADMIN_PROFILES);
+/**
+ * Map Lead Mongoose Doc to Interface
+ */
+function mapLead(doc: any): Lead {
+  const data = doc.toObject ? doc.toObject() : doc;
+  return {
+    id: data._id.toString(),
+    studentId: data.studentId.toString(),
+    rankUsed: data.rankUsed,
+    preferredBranch: data.preferredBranch,
+    year: data.year,
+    status: data.status,
+    callbackRequested: data.callbackRequested,
+    assignedAdminId: data.assignedAdminId ? data.assignedAdminId.toString() : null,
+    assignedAt: data.assignedAt,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt,
+  } as Lead;
+}
+
+/**
+ * Map Followup Mongoose Doc to Interface
+ */
+function mapFollowup(doc: any): LeadFollowup {
+  const data = doc.toObject ? doc.toObject() : doc;
+  return {
+    id: data._id.toString(),
+    leadId: data.leadId.toString(),
+    adminId: data.adminId.toString(),
+    remark: data.remark,
+    nextCallbackDate: data.nextCallbackDate,
+    status: data.status,
+    createdAt: data.createdAt,
+  } as LeadFollowup;
+}
 
 /**
  * Create a new lead when student performs college lookup
  */
 export async function createLead(data: CreateLeadInput): Promise<Lead> {
-  const now = Timestamp.now();
+  await dbConnect();
   
-  const lead: Omit<Lead, 'id'> = {
+  const lead = await LeadModel.create({
     ...data,
     status: 'new',
     callbackRequested: false,
     assignedAdminId: null,
     assignedAt: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  const batch = adminDb.batch();
-  
-  const leadRef = leadsCollection.doc();
-  batch.set(leadRef, lead);
-  
-  // Increment totalRequests in stats
-  batch.update(statsDoc, {
-    totalRequests: FieldValue.increment(1),
-    updatedAt: now,
   });
 
-  await batch.commit();
+  // Increment totalRequests in stats
+  let statsDoc = await DashboardStatsModel.findOne();
+  if (!statsDoc) {
+    statsDoc = await DashboardStatsModel.create({
+      totalRegistrations: 0,
+      totalInfoFilled: 0,
+      totalRequests: 0,
+      pendingCallbacks: 0,
+    });
+  }
   
-  return { id: leadRef.id, ...lead } as Lead;
+  await DashboardStatsModel.findByIdAndUpdate(statsDoc._id, {
+    $inc: { totalRequests: 1 }
+  });
+
+  return mapLead(lead);
 }
 
 /**
  * Get a lead by ID
  */
 export async function getLeadById(id: string): Promise<Lead | null> {
-  const doc = await leadsCollection.doc(id).get();
+  await dbConnect();
+  const doc = await LeadModel.findById(id);
   
-  if (!doc.exists) {
+  if (!doc) {
     return null;
   }
   
-  return { id: doc.id, ...doc.data() } as Lead;
+  return mapLead(doc);
 }
 
 /**
@@ -62,30 +95,33 @@ export async function getLeads(options: {
   limit?: number;
   startAfter?: string;
 } = {}): Promise<Lead[]> {
-  let query = leadsCollection.orderBy('createdAt', 'desc');
+  await dbConnect();
+  
+  let query: any = {};
   
   if (options.status) {
-    query = query.where('status', '==', options.status);
+    query.status = options.status;
   }
   
   if (options.assignedAdminId) {
-    query = query.where('assignedAdminId', '==', options.assignedAdminId);
+    query.assignedAdminId = options.assignedAdminId;
   }
   
-  if (options.limit) {
-    query = query.limit(options.limit);
-  }
+  let dbQuery = LeadModel.find(query).sort({ createdAt: -1 });
   
   if (options.startAfter) {
-    const startDoc = await leadsCollection.doc(options.startAfter).get();
-    if (startDoc.exists) {
-      query = query.startAfter(startDoc);
+    const startDoc = await LeadModel.findById(options.startAfter);
+    if (startDoc) {
+      dbQuery = dbQuery.where('createdAt').lt(startDoc.createdAt as any);
     }
   }
   
-  const snapshot = await query.get();
+  if (options.limit) {
+    dbQuery = dbQuery.limit(options.limit);
+  }
   
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
+  const docs = await dbQuery.exec();
+  return docs.map(mapLead);
 }
 
 /**
@@ -95,31 +131,59 @@ export async function assignLead(
   leadId: string,
   adminId: string
 ): Promise<void> {
-  const now = Timestamp.now();
+  await dbConnect();
+  console.log("TRACE: assignLead START", { leadId, adminId });
+  const now = new Date();
   
-  const batch = adminDb.batch();
-  
-  // Update lead
-  batch.update(leadsCollection.doc(leadId), {
-    assignedAdminId: adminId,
-    status: 'assigned',
-    assignedAt: now,
-    updatedAt: now,
-  });
-  
-  // Increment admin's active leads
-  batch.update(adminsCollection.doc(adminId), {
-    currentActiveLeads: FieldValue.increment(1),
-    updatedAt: now,
-  });
-  
-  // Increment pending callbacks in stats
-  batch.update(statsDoc, {
-    pendingCallbacks: FieldValue.increment(1),
-    updatedAt: now,
-  });
-
-  await batch.commit();
+  try {
+    await Promise.all([
+      (async () => {
+        console.log("TRACE: Updating lead assignment...");
+        const lead = await LeadModel.findByIdAndUpdate(leadId, {
+          assignedAdminId: adminId,
+          status: 'assigned',
+          assignedAt: now,
+        });
+        console.log("TRACE: Lead updated:", lead ? "Found" : "NOT FOUND");
+      })(),
+      (async () => {
+        console.log("TRACE: Updating admin profile...");
+        // Use upsert or check existence to prevent silent failures if profile missing
+        const profile = await AdminProfileModel.findOneAndUpdate(
+          { userId: adminId },
+          { $inc: { currentActiveLeads: 1 } },
+          { new: true, upsert: false } // We don't want to create a profile if it doesn't exist, but we should log it
+        );
+        if (!profile) {
+          console.warn(`TRACE: WARNING - Admin profile not found for userId: ${adminId}. Lead assigned regardless.`);
+        } else {
+          console.log("TRACE: Admin profile updated successfully");
+        }
+      })(),
+      (async () => {
+         console.log("TRACE: Updating dashboard stats...");
+         let statsDoc = await DashboardStatsModel.findOne();
+         if (!statsDoc) {
+             console.log("TRACE: Stats doc missing, creating initial stats...");
+             statsDoc = await DashboardStatsModel.create({
+               totalRegistrations: 0,
+               totalInfoFilled: 0,
+               totalRequests: 0,
+               pendingCallbacks: 0,
+             });
+         }
+         
+         await DashboardStatsModel.findByIdAndUpdate(statsDoc._id, {
+           $inc: { pendingCallbacks: 1 }
+         });
+         console.log("TRACE: Stats incremented");
+      })()
+    ]);
+    console.log("TRACE: assignLead SUCCESS");
+  } catch (error: any) {
+    console.error("TRACE: assignLead ERROR:", error.message, error.stack);
+    throw error;
+  }
 }
 
 /**
@@ -129,42 +193,60 @@ export async function updateLeadStatus(
   leadId: string,
   status: LeadStatus
 ): Promise<void> {
-  const lead = await getLeadById(leadId);
-  if (!lead) {
-    throw new Error('Lead not found');
-  }
+  await dbConnect();
+  console.log("TRACE: updateLeadStatus START", { leadId, status });
   
-  const now = Timestamp.now();
-  const batch = adminDb.batch();
-  
-  batch.update(leadsCollection.doc(leadId), {
-    status,
-    updatedAt: now,
-  });
-  
-  // If completing or closing, decrement admin's active leads and pending callbacks
-  if ((status === 'completed' || status === 'closed') && lead.assignedAdminId) {
-    batch.update(adminsCollection.doc(lead.assignedAdminId), {
-      currentActiveLeads: FieldValue.increment(-1),
-      updatedAt: now,
-    });
+  try {
+    const lead = await LeadModel.findById(leadId);
+    if (!lead) {
+      console.error("TRACE: updateLeadStatus ERROR - Lead not found", leadId);
+      throw new Error('Lead not found');
+    }
+    console.log("TRACE: Lead found for status update, current status:", lead.status);
     
-    batch.update(statsDoc, {
-      pendingCallbacks: FieldValue.increment(-1),
-      updatedAt: now,
-    });
+    await LeadModel.findByIdAndUpdate(leadId, { status });
+    console.log("TRACE: Lead status updated to:", status);
+    
+    // If completing or closing, decrement admin's active leads and pending callbacks
+    if ((status === 'completed' || status === 'closed') && lead.assignedAdminId) {
+      console.log("TRACE: Decrementing leads and stats for completion/closure...", { adminId: lead.assignedAdminId });
+      await Promise.all([
+        (async () => {
+           console.log("TRACE: Updating admin active leads...");
+           const profile = await AdminProfileModel.findOneAndUpdate({ userId: lead.assignedAdminId }, {
+             $inc: { currentActiveLeads: -1 }
+           });
+           console.log("TRACE: Admin profile updated:", profile ? "Found" : "NOT FOUND");
+        })(),
+        (async () => {
+           console.log("TRACE: Updating dashboard stats...");
+           const statsDoc = await DashboardStatsModel.findOne();
+           if (statsDoc) {
+               console.log("TRACE: Stats found, decrementing pending callbacks...");
+               await DashboardStatsModel.findByIdAndUpdate(statsDoc._id, {
+                 $inc: { pendingCallbacks: -1 }
+               });
+               console.log("TRACE: Stats decremented");
+           } else {
+               console.log("TRACE: NOTICE - Stats doc not found during status update");
+           }
+        })()
+      ]);
+    }
+    console.log("TRACE: updateLeadStatus SUCCESS");
+  } catch (error: any) {
+    console.error("TRACE: updateLeadStatus ERROR:", error.message, error.stack);
+    throw error;
   }
-  
-  await batch.commit();
 }
 
 /**
  * Request callback for a lead
  */
 export async function requestCallback(leadId: string): Promise<void> {
-  await leadsCollection.doc(leadId).update({
+  await dbConnect();
+  await LeadModel.findByIdAndUpdate(leadId, {
     callbackRequested: true,
-    updatedAt: Timestamp.now(),
   });
 }
 
@@ -175,77 +257,58 @@ export async function createFollowup(
   adminId: string,
   data: CreateFollowupInput
 ): Promise<LeadFollowup> {
-  const now = Timestamp.now();
+  await dbConnect();
   
-  const followup: Omit<LeadFollowup, 'id'> = {
+  const followup = await LeadFollowupModel.create({
     leadId: data.leadId,
     adminId,
     remark: data.remark,
-    nextCallbackDate: data.nextCallbackDate 
-      ? Timestamp.fromDate(data.nextCallbackDate) 
-      : null,
+    nextCallbackDate: data.nextCallbackDate || null,
     status: 'pending',
-    createdAt: now,
-  };
+  });
 
-  const batch = adminDb.batch();
-  
-  const followupRef = followupsCollection.doc();
-  batch.set(followupRef, followup);
-  
   // Update lead status to in_progress
-  batch.update(leadsCollection.doc(data.leadId), {
+  await LeadModel.findByIdAndUpdate(data.leadId, {
     status: 'in_progress',
-    updatedAt: now,
   });
   
-  await batch.commit();
-  
-  return { id: followupRef.id, ...followup } as LeadFollowup;
+  return mapFollowup(followup);
 }
 
 /**
  * Get follow-ups for a lead
  */
 export async function getFollowupsByLeadId(leadId: string): Promise<LeadFollowup[]> {
-  const snapshot = await followupsCollection
-    .where('leadId', '==', leadId)
-    .orderBy('createdAt', 'desc')
-    .get();
-  
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LeadFollowup));
+  await dbConnect();
+  const docs = await LeadFollowupModel.find({ leadId }).sort({ createdAt: -1 });
+  return docs.map(mapFollowup);
 }
 
 /**
  * Mark a follow-up as completed
  */
 export async function completeFollowup(followupId: string): Promise<void> {
-  await followupsCollection.doc(followupId).update({
-    status: 'completed',
-  });
+  await dbConnect();
+  await LeadFollowupModel.findByIdAndUpdate(followupId, { status: 'completed' });
 }
 
 /**
  * Count leads by status
  */
 export async function countLeadsByStatus(status: LeadStatus): Promise<number> {
-  const snapshot = await leadsCollection
-    .where('status', '==', status)
-    .count()
-    .get();
-  
-  return snapshot.data().count;
+  await dbConnect();
+  return LeadModel.countDocuments({ status });
 }
 
 /**
  * Get leads assigned to an admin with pending callbacks
  */
 export async function getAdminPendingCallbacks(adminId: string): Promise<Lead[]> {
-  const snapshot = await leadsCollection
-    .where('assignedAdminId', '==', adminId)
-    .where('status', 'in', ['assigned', 'in_progress'])
-    .orderBy('createdAt', 'desc')
-    .get();
+  await dbConnect();
+  const docs = await LeadModel.find({
+    assignedAdminId: adminId,
+    status: { $in: ['assigned', 'in_progress'] }
+  }).sort({ createdAt: -1 });
   
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
+  return docs.map(mapLead);
 }

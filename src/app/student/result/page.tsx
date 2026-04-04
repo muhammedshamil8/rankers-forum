@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2, AlertTriangle, GraduationCap, Phone, ChevronDown, Building2 } from 'lucide-react';
+import { Loader2, AlertTriangle, ChevronDown, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAuth, useRequireAuth } from '@/lib/hooks';
+import { useQuery } from '@tanstack/react-query';
 import { INDIAN_STATES } from '@/lib/constants';
 import { LogoutModal } from '@/components/modals';
 
@@ -27,11 +28,14 @@ interface College {
   category: string;
   rank: number;
   chance: 'high' | 'moderate' | 'low';
+  year?: number;
 }
 
 interface ResultData {
   colleges: College[];
-  year: number;
+  otherColleges?: College[];
+  year?: number;
+  currentYear?: number;
   rank: number;
 }
 
@@ -46,28 +50,72 @@ export default function StudentResultPage() {
   const [resultData, setResultData] = useState<ResultData | null>(null);
   const [expandedCollege, setExpandedCollege] = useState<string | null>(null);
 
+  // 1. Try to get data from sessionStorage first
   useEffect(() => {
-    // Get result from sessionStorage
     const stored = sessionStorage.getItem('collegeResult');
     if (stored) {
       try {
-        setResultData(JSON.parse(stored));
-        console.log("Result Data: ", JSON.parse(stored));
-      } catch {
-        router.push('/student/info');
+        const parsed = JSON.parse(stored);
+        if (parsed && ((parsed.colleges && parsed.colleges.length > 0) || (parsed.otherColleges && parsed.otherColleges.length > 0))) {
+          setResultData(parsed);
+          console.log("DEBUG: Valid result found in session:", parsed.colleges?.length);
+        } else {
+          console.log("DEBUG: Session data empty/invalid, ignoring");
+          sessionStorage.removeItem('collegeResult');
+        }
+      } catch (error) {
+        console.error("DEBUG: Session parse error:", error);
+        sessionStorage.removeItem('collegeResult');
       }
-    } else {
-      router.push('/student/info');
     }
-  }, [router]);
+  }, []);
+
+  // 2. Fetch profile
+  const { data: profileData, isLoading: isProfileLoading } = useQuery({
+    queryKey: ['student-profile'],
+    queryFn: async () => {
+      const resp = await fetch('/api/students/profile');
+      if (!resp.ok) return null;
+      return resp.json();
+    },
+    enabled: !!isAuthorized,
+  });
+
+  // 3. Fetch results if not in session
+  const { data: fetchedResults, isLoading: isFetchingResults } = useQuery({
+    queryKey: ['eligible-colleges-direct', profileData?.student?.domicileState],
+    queryFn: async () => {
+      console.log("DEBUG: Fetching results from API for", profileData.student.domicileState);
+      const params = new URLSearchParams({
+        domicileState: profileData.student.domicileState,
+      });
+      const resp = await fetch(`/api/colleges/eligible?${params}`);
+      if (!resp.ok) throw new Error('API Failed');
+      return resp.json();
+    },
+    enabled: !!isAuthorized && !!profileData?.student && (!resultData || (resultData.colleges?.length === 0 && resultData.otherColleges?.length === 0)),
+    staleTime: 60000, // 1 minute
+  });
 
   useEffect(() => {
-    if (!authLoading && !isAuthorized) {
-      router.push('/');
+    if (fetchedResults && !resultData) {
+      setResultData(fetchedResults);
     }
-  }, [authLoading, isAuthorized, router]);
+  }, [fetchedResults, resultData]);
 
-  if (authLoading || !isAuthorized || !resultData) {
+  const isBusy = authLoading || (isAuthorized && !resultData && (isProfileLoading || isFetchingResults));
+
+  // Redirect if absolutely no data found after loading
+  useEffect(() => {
+    if (!isBusy && isAuthorized && !resultData && !isFetchingResults && !isProfileLoading) {
+      const timer = setTimeout(() => {
+         if (!resultData) router.push('/student/info');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [isBusy, isAuthorized, resultData, isFetchingResults, isProfileLoading, router]);
+
+  if (isBusy) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
@@ -75,50 +123,54 @@ export default function StudentResultPage() {
     );
   }
 
-  const colleges = resultData.colleges || [];
-  const filteredColleges = colleges.filter(college => {
-    return true;
-    // No data in the table
-    // const matchesType = college.collegeType === activeTab;
-    // const matchesState = stateFilter === 'all' || college.collegeLocation.includes(stateFilter);
-    // return matchesType && matchesState;
+  if (!resultData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+           <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto" />
+           <p className="mt-4 text-slate-500">Retrieving your predictions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Deduplicate colleges (in case of overlap between colleges and otherColleges)
+  const uniqueCollegesMap = new Map();
+  [...(resultData.colleges || []), ...(resultData.otherColleges || [])].forEach((c: any) => {
+    if (!uniqueCollegesMap.has(c.id)) {
+      uniqueCollegesMap.set(c.id, {
+        ...c,
+        rank: Number(c.rank || c.closingRank || 0),
+        courseName: (c.courseName || c.branch || '').toString(),
+      });
+    }
   });
 
-  console.log("Filtered Colleges: ", filteredColleges);
+  const allColleges = Array.from(uniqueCollegesMap.values());
 
-  const getChanceBadge = (chance: string) => {
-    switch (chance) {
-      case 'high':
-        return <Badge className="bg-green-50 text-green-700 border-green-200 hover:bg-green-50">High Chance</Badge>;
-      case 'moderate':
-        return <Badge className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50">Moderate Chance</Badge>;
-      case 'low':
-        return <Badge className="bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-100">Low Chance</Badge>;
-      default:
-        return null;
-    }
-  };
+  const filteredColleges = allColleges.filter(college => {
+    let type = (college.collegeType || '').toLowerCase();
+    let normalized = '';
+    if (type.includes('govt') || type.includes('government')) normalized = 'government';
+    else if (type.includes('private university') || type.includes('deemed')) normalized = 'deemed';
+    else if (type.includes('private')) normalized = 'private';
+    else normalized = type;
 
-  const getChanceIndicatorColor = (chance: string) => {
-    switch (chance) {
-      case 'high': return 'bg-green-500';
-      case 'moderate': return 'bg-amber-500';
-      case 'low': return 'bg-slate-400';
-      default: return 'bg-slate-300';
-    }
-  };
+    const matchesType = normalized === activeTab;
+    const matchesState = stateFilter === 'all' || (college.collegeLocation && college.collegeLocation.includes(stateFilter));
+    
+    return matchesType && matchesState;
+  });
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Title and Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My Eligible College List</h1>
             <p className="text-amber-600 flex items-center gap-2 mt-1 text-sm">
               <AlertTriangle className="h-4 w-4" />
-              Predictions are estimates based on past data and do not guarantee admission.
+              Estimates based on past data.
             </p>
           </div>
 
@@ -131,16 +183,13 @@ export default function StudentResultPage() {
               <SelectContent>
                 <SelectItem value="all">All States</SelectItem>
                 {INDIAN_STATES.map((state) => (
-                  <SelectItem key={state} value={state}>
-                    {state}
-                  </SelectItem>
+                  <SelectItem key={state} value={state}>{state}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-2 mb-6">
           {[
             { value: 'government', label: 'Government' },
@@ -149,7 +198,7 @@ export default function StudentResultPage() {
           ].map((tab) => (
             <button
               key={tab.value}
-              onClick={() => setActiveTab(tab.value as typeof activeTab)}
+              onClick={() => setActiveTab(tab.value as any)}
               className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === tab.value
                 ? 'bg-indigo-600 text-white'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
@@ -160,102 +209,57 @@ export default function StudentResultPage() {
           ))}
         </div>
 
-        {/* Year Label */}
-        <p className="text-slate-600 mb-4">Current Year - {resultData.year}</p>
+        <p className="text-slate-600 mb-4">Year: {resultData.currentYear || resultData.year || '2024'}</p>
 
-        {/* College List */}
         {filteredColleges.length > 0 ? (
           <div className="space-y-4">
             {filteredColleges.map((college) => (
-              <div
-                key={college.id}
-                className="bg-white rounded-xl border border-slate-100 overflow-hidden"
-              >
+              <div key={college.id} className="bg-white rounded-xl border border-slate-100 overflow-hidden">
                 <div className="flex items-center p-5">
-                  {/* Chance Indicator Bar */}
-                  <div className={`w-1 h-16 rounded-full ${getChanceIndicatorColor(college.chance)} mr-5`}></div>
-
-                  {/* College Info */}
-                  <div className="flex-1">
+                   <div className="flex-1">
                     <h3 className="font-semibold text-slate-900 text-lg">{college.collegeName}</h3>
                     <p className="text-slate-500 text-sm">{college.collegeLocation}</p>
                   </div>
-
-                  {/* Details Grid */}
-                  <div className="hidden sm:grid grid-cols-3 gap-8 text-center">
+                  <div className="hidden sm:grid grid-cols-3 gap-8 text-center px-4">
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">Quota</p>
-                      {/* <p className="text-sm font-medium text-slate-700">{college.quota === 'all_india' ? 'All India' : college.quota?.replace('_', ' ')}</p> */}
-                      <p className="text-sm font-medium text-slate-700">All India</p>
+                      <p className="text-xs text-slate-400">Quota</p>
+                      <p className="text-sm font-medium">{college.quota?.replace('_', ' ') || 'All India'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">Closing Rank</p>
-                      <p className="text-sm font-medium text-slate-700">{college.rank.toLocaleString()}</p>
+                      <p className="text-xs text-slate-400">Closing Rank</p>
+                      <p className="text-sm font-medium">{college.rank.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">Course</p>
-                      <p className="text-sm font-medium text-slate-700">{college.courseName}</p>
+                      <p className="text-xs text-slate-400">Course</p>
+                      <p className="text-sm font-medium">{college.courseName}</p>
                     </div>
                   </div>
-
-                  {/* Actions */}
                   <div className="flex flex-col items-end gap-2 ml-6">
-                    {getChanceBadge(college.chance)}
                     <button
                       onClick={() => setExpandedCollege(expandedCollege === college.id ? null : college.id)}
-                      className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700"
+                      className="flex items-center gap-1 text-sm text-indigo-600"
                     >
-                      <ChevronDown className={`h-4 w-4 transition-transform ${expandedCollege === college.id ? 'rotate-180' : ''}`} />
-                      View Details
+                      <ChevronDown className={`h-4 w-4 ${expandedCollege === college.id ? 'rotate-180' : ''}`} />
+                      Details
                     </button>
                   </div>
                 </div>
-
-                {/* Expanded Details */}
-                {expandedCollege === college.id && (
-                  <div className="border-t border-slate-100 p-5 bg-slate-50">
-                    <div className="grid sm:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <p className="text-slate-500">Category</p>
-                        <p className="font-medium">{college.category.toUpperCase()}</p>
-                      </div>
-                      {/* <div>
-                        <p className="text-slate-500">Opening Rank</p>
-                        <p className="font-medium">{college.openingRank.toLocaleString()}</p>
-                      </div> */}
-                      <div>
-                        <p className="text-slate-500">Closing Rank</p>
-                        <p className="font-medium">{college.rank.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500">Quota</p>
-                        {/* <p className="font-medium">{college.quota === 'all_india' ? 'All India' : college.quota.replace('_', ' ')}</p> */}
-                        <p className="font-medium">All India</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-slate-100 p-12 text-center">
-            <Building2 className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-500">No colleges found matching your criteria.</p>
+          <div className="bg-white rounded-xl border border-slate-100 p-12 text-center text-slate-500">
+            <Building2 className="h-12 w-12 mx-auto mb-4 opacity-20" />
+            No colleges found matching your criteria.
           </div>
         )}
 
-        {/* Previous Year Link */}
         <div className="mt-8 text-right">
-          <Link
-            href="/student/previous-year"
-            className="text-indigo-600 hover:text-indigo-700 font-medium"
-          >
-            Previous Year Colleges (For Reference) →
+          <Link href="/student/previous-year" className="text-indigo-600 font-medium underline">
+             View Previous Year Reference
           </Link>
         </div>
       </main>
-
       <LogoutModal open={logoutOpen} onOpenChange={setLogoutOpen} />
     </div>
   );

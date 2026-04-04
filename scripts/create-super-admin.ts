@@ -1,7 +1,7 @@
 /**
  * Super Admin Setup Script
  * 
- * This script creates a super admin user in Firebase.
+ * This script creates a super admin user in Firebase and MongoDB.
  * Run with: npx ts-node --skip-project scripts/create-super-admin.ts
  * 
  * Or add to package.json scripts:
@@ -10,9 +10,11 @@
 
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import * as dotenv from 'dotenv';
 import * as readline from 'readline';
+import mongoose from 'mongoose';
+import { UserModel } from '../src/models/User';
+import { AdminProfileModel } from '../src/models/AdminProfile';
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
@@ -59,7 +61,13 @@ async function createSuperAdmin() {
   initFirebase();
 
   const auth = getAuth();
-  const db = getFirestore();
+
+  if (!process.env.MONGODB_URI) {
+    console.error('❌ Missing MONGODB_URI in .env.local');
+    process.exit(1);
+  }
+
+  await mongoose.connect(process.env.MONGODB_URI);
 
   // Get user input
   const email = await prompt('Email: ');
@@ -90,10 +98,9 @@ async function createSuperAdmin() {
 
     console.log(`✅ Firebase Auth user created: ${userRecord.uid}`);
 
-    const now = Timestamp.now();
-
-    // Create user document
-    await db.collection('users').doc(userRecord.uid).set({
+    // Create user document in MongoDB
+    await UserModel.create({
+      _id: userRecord.uid,
       role: 'super_admin',
       firstName,
       lastName,
@@ -103,31 +110,29 @@ async function createSuperAdmin() {
       state: '',
       isActive: true,
       avatarUrl: null,
-      createdAt: now,
-      updatedAt: now,
     });
 
-    console.log('✅ User document created in Firestore');
+    console.log('✅ User document created in MongoDB');
 
     // Create admin profile
-    await db.collection('admin_profiles').doc(userRecord.uid).set({
+    await AdminProfileModel.create({
       userId: userRecord.uid,
       employeeNumber: 'SA001',
-      dateOfBirth: null,
-      dateOfJoining: now,
+      dateOfBirth: new Date(),
+      dateOfJoining: new Date(),
       jobTitle: 'Super Admin',
       jobType: 'full_time',
+      gender: 'male',
       maritalStatus: '',
       bloodGroup: '',
       nationality: 'India',
       noticePeriod: '1 Month',
       maxActiveLeads: 100,
-      activeLeadCount: 0,
-      createdAt: now,
-      updatedAt: now,
+      currentActiveLeads: 0,
+      isAvailable: true,
     });
 
-    console.log('✅ Admin profile created');
+    console.log('✅ Admin profile created in MongoDB');
 
     console.log('\n🎉 Super Admin created successfully!\n');
     console.log('Login details:');

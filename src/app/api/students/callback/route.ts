@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminAuth } from '@/lib/firebase/admin';
 import { getUserById } from '@/lib/services/users';
 import { getStudentByUserId } from '@/lib/services/students';
-import { createLead, getLeads } from '@/lib/services/leads';
-import { COLLECTIONS } from '@/lib/constants';
-import { Timestamp, FieldValue } from 'firebase-admin/firestore';
+import { createLead, getLeads, requestCallback } from '@/lib/services/leads';
+import { incrementStat } from '@/lib/services/stats';
 
 /**
  * Helper to verify student session
@@ -42,9 +41,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if student has any callback request
-    const leads = await getLeads({
-      status: undefined, // All statuses
-    });
+    const leads = await getLeads();
 
     const studentLeads = leads.filter(lead => lead.studentId === session.uid);
     const hasCallback = studentLeads.some(lead => lead.callbackRequested);
@@ -91,15 +88,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if there's already a pending callback request
-    const leadsCollection = adminDb.collection(COLLECTIONS.LEADS);
-    const existingLeadSnapshot = await leadsCollection
-      .where('studentId', '==', uid)
-      .where('callbackRequested', '==', true)
-      .where('status', 'in', ['new', 'assigned', 'in_progress'])
-      .limit(1)
-      .get();
+    const leads = await getLeads();
+    const existingLead = leads.find(lead => 
+      lead.studentId === uid && 
+      lead.callbackRequested && 
+      ['new', 'assigned', 'in_progress'].includes(lead.status)
+    );
 
-    if (!existingLeadSnapshot.empty) {
+    if (existingLead) {
       return NextResponse.json({ 
         error: 'You already have a pending callback request',
         existingCallback: true,
@@ -119,17 +115,12 @@ export async function POST(request: NextRequest) {
     });
 
     // Update the lead to mark callback as requested
-    await leadsCollection.doc(lead.id).update({
-      callbackRequested: true,
-      updatedAt: Timestamp.now(),
-    });
+    await requestCallback(lead.id);
 
-    // Update dashboard stats
-    const statsDoc = adminDb.collection(COLLECTIONS.DASHBOARD_STATS).doc('global');
-    await statsDoc.update({
-      totalCallbacks: FieldValue.increment(1),
-      updatedAt: Timestamp.now(),
-    });
+    // Update dashboard stats (totalRequests handled gracefully in createLead, callbacks explicitly here if tracked differently)
+    // The previous code had totalCallbacks incremented on global stats. But DashboardStats schema doesn't have totalCallbacks?
+    // Let's increment pendingCallbacks here because it's a new callback manually requested.
+    await incrementStat('pendingCallbacks');
 
     return NextResponse.json({ 
       success: true, 

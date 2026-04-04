@@ -36,18 +36,17 @@ export default function LandingPage() {
   // Redirect logged-in users to their appropriate page
   useEffect(() => {
     // Commented out to prevent routing to any other page
-    /*
     if (!loading && user) {
       router.push(getRedirectUrl(user));
     }
-    */
+  
   }, [loading, user, router]);
 
 
   return (
     <>
-      <ComingSoon />
-      {/*
+      {/* <ComingSoon /> */}
+      
       <div className="min-h-screen bg-white">
         <Navbar
           user={user}
@@ -99,7 +98,7 @@ export default function LandingPage() {
           }}
         />
       </div>
-      */}
+     
     </>
   );
 }

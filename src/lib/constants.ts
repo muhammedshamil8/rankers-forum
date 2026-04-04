@@ -122,4 +122,4 @@ export const DEFAULT_MAX_ACTIVE_LEADS = 50;
 // ============================================
 
 export const AVAILABLE_YEARS = [2023, 2024, 2025] as const;
-export const CURRENT_YEAR = new Date().getFullYear();
+export const CURRENT_YEAR = 2025;

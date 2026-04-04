@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       courseName: student.preferredBranch,
       category: student.category,
       year: CURRENT_YEAR - 1,
-      quota: student.counsellingType === 'all_india' ? 'All India' : 'State',
+      quota: student.counsellingType,
       locations: [student.locationPreference1, student.locationPreference2, student.locationPreference3]
       // collegeType: collegeType || undefined,
       // state: state || undefined,

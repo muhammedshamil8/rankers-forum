@@ -31,6 +31,8 @@
     "firebase-admin": "^13.6.0",
     "formik": "^2.4.9",
     "lucide-react": "^0.562.0",
+    "mongodb": "^7.1.1",
+    "mongoose": "^9.3.3",
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",

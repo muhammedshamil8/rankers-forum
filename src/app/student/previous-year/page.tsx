@@ -22,11 +22,11 @@ interface College {
   collegeName: string;
   collegeLocation: string;
   collegeType: string;
-  branch: string;
+  courseName: string;
   quota: string;
   category: string;
-  openingRank: number;
-  closingRank: number;
+  openingRank?: number;
+  rank: number;
   year: number;
   chance: 'high' | 'moderate' | 'low';
 }
@@ -66,22 +66,64 @@ export default function PreviousYearPage() {
     );
   }
 
-  const colleges: College[] = data?.colleges || [];
-  const filteredColleges = colleges.filter(college => {
-    const matchesType = college.collegeType === activeTab;
-    const matchesState = stateFilter === 'all' || college.collegeLocation.includes(stateFilter);
+  // Deduplicate colleges (in case of overlap between colleges and otherColleges)
+  const uniqueCollegesMap = new Map();
+  const rawColleges = [
+    ...(data?.cutoffsByYear ? Object.values(data.cutoffsByYear).flatMap((y: any) => [
+      ...(y.colleges || []),
+      ...(y.otherColleges || [])
+    ]) : []),
+    ...(data?.colleges || [])
+  ];
+
+  rawColleges.forEach((c: any) => {
+    // Composite key of ID and Year to be safe, but mostly MongoDB ID is unique
+    const uniqueKey = `${c.id || c._id}-${c.year || 2024}`;
+    if (!uniqueCollegesMap.has(uniqueKey)) {
+      uniqueCollegesMap.set(uniqueKey, {
+        ...c,
+        id: c.id || c._id,
+        rank: Number(c.rank || c.closingRank || 0),
+        courseName: (c.courseName || c.branch || '').toString(),
+      });
+    }
+  });
+
+  const colleges = Array.from(uniqueCollegesMap.values()) as College[];
+
+  console.log("DEBUG: Total colleges received:", colleges.length);
+  if (colleges.length > 0) {
+    console.log("DEBUG: Sample college type:", colleges[0].collegeType);
+  }
+
+  const filteredColleges = colleges.filter((college: College) => {
+    // Ultra-robust type matching
+    let type = (college.collegeType || '').toLowerCase();
+    let normalized = '';
+    if (type.includes('govt') || type.includes('government')) normalized = 'government';
+    else if (type.includes('private university') || type.includes('deemed')) normalized = 'deemed';
+    else if (type.includes('private')) normalized = 'private';
+    else normalized = type; // Fallback to raw type
+
+    const matchesType = normalized === activeTab;
+    const matchesState = stateFilter === 'all' || (college.collegeLocation && college.collegeLocation.includes(stateFilter));
+    
     return matchesType && matchesState;
   });
 
+  console.log(`DEBUG: Filtered colleges for tab ${activeTab}:`, filteredColleges.length);
+
   // Group by year
-  const collegesByYear = filteredColleges.reduce((acc, college) => {
-    const year = college.year;
+  const collegesByYear = filteredColleges.reduce((acc, college: College) => {
+    // Fallback to year if data structure is nested or flat
+    const year = college.year || 2024; 
     if (!acc[year]) acc[year] = [];
     acc[year].push(college);
     return acc;
   }, {} as Record<number, College[]>);
 
   const years = Object.keys(collegesByYear).map(Number).sort((a, b) => b - a);
+  console.log("DEBUG: Years found:", years);
 
   const getChanceBadge = (chance: string) => {
     switch (chance) {
@@ -173,11 +215,10 @@ export default function PreviousYearPage() {
 
                 {/* College List */}
                 <div className="space-y-2">
-                  {collegesByYear[year].map((college) => (
+                  {collegesByYear[year].map((college: College) => (
                     <div
                       key={college.id}
-                      className="bg-[#F9FAFB] rounded-xl border border-[#9FA6B2]/60
-                       overflow-hidden"
+                      className="bg-[#F9FAFB] rounded-xl border border-[#9FA6B2]/60 overflow-hidden"
                     >
                       <div className="grid gap-y-4 lg:grid-cols-2 p-3 md:p-5">
 
@@ -209,15 +250,15 @@ export default function PreviousYearPage() {
                           text-center">
                             <div className='bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full'>
                               <p className=" text-[11px] md:text-xs text-slate-400 mb-1">Quota</p>
-                              <p className="text-sm font-medium text-slate-700">{college.quota === 'all_india' ? 'All India' : college.quota.replace('_', ' ')}</p>
+                              <p className="text-sm font-medium text-slate-700">{college.quota === 'all_india' ? 'All India' : (college.quota || '').replace('_', ' ')}</p>
                             </div>
                             <div className='bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full'>
                               <p className=" text-[11px] md:text-xs text-slate-400 mb-1">Closing Rank</p>
-                              <p className="text-sm font-medium text-slate-700">{college.closingRank.toLocaleString()}</p>
+                              <p className="text-sm font-medium text-slate-700">{college.rank?.toLocaleString() || 'N/A'}</p>
                             </div>
                             <div className='bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full'>
                               <p className=" text-[11px] md:text-xs text-slate-400 mb-1">Course</p>
-                              <p className="text-sm font-medium text-slate-700">{college.branch.toUpperCase()}</p>
+                              <p className="text-sm font-medium text-slate-700">{(college.courseName || '').toUpperCase()}</p>
                             </div>
                           </div>
 
@@ -242,19 +283,19 @@ export default function PreviousYearPage() {
                           <div className="grid sm:grid-cols-4 gap-4 text-sm">
                             <div>
                               <p className="text-slate-500">Category</p>
-                              <p className="font-medium">{college.category.toUpperCase()}</p>
+                              <p className="font-medium">{college.category?.toUpperCase() || 'N/A'}</p>
                             </div>
                             <div>
                               <p className="text-slate-500">Opening Rank</p>
-                              <p className="font-medium">{college.openingRank.toLocaleString()}</p>
+                              <p className="font-medium">{college.openingRank ? college.openingRank.toLocaleString() : 'N/A'}</p>
                             </div>
                             <div>
                               <p className="text-slate-500">Closing Rank</p>
-                              <p className="font-medium">{college.closingRank.toLocaleString()}</p>
+                              <p className="font-medium">{college.rank?.toLocaleString() || 'N/A'}</p>
                             </div>
                             <div>
                               <p className="text-slate-500">Quota</p>
-                              <p className="font-medium">{college.quota === 'all_india' ? 'All India' : college.quota.replace('_', ' ')}</p>
+                              <p className="font-medium">{college.quota === 'all_india' ? 'All India' : (college.quota || '').replace('_', ' ')}</p>
                             </div>
                           </div>
                         </div>

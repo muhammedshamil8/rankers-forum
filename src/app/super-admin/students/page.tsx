@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -25,7 +26,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { INDIAN_STATES } from '@/lib/constants';
 import { TableShimmer } from '@/components/ui/table-shimmer';
 import { Pagination } from '@/components/ui/pagination';
+import { exportToExcel } from '@/lib/utils/excel-export';
 import Image from 'next/image';
+
 
 interface Student {
   id: string;
@@ -147,7 +150,25 @@ export default function StudentsPage() {
     setSearchQuery(value);
     setCurrentPage(1); // Reset to first page when search changes
   };
+  const handlePrint = () => {
+    window.print();
+  };
 
+  const handleExport = () => {
+    const exportData = filteredStudents.map(student => ({
+      'Name': `${student.firstName} ${student.lastName}`,
+      'Email': student.email,
+      'Phone': student.phone,
+      'City': student.city,
+      'State': student.state,
+      'Rank': student.rank,
+      'Category': student.category,
+      'Passout Year': student.yearOfPassout,
+      'Has Callback': student.hasCallback ? 'Yes' : 'No'
+    }));
+    
+    exportToExcel(exportData, 'Students_List', 'Students');
+  };
   const handleTabChange = (tab: 'details' | 'callback') => {
     setActiveTab(tab);
     setSearchQuery(''); // Clear search when tab changes
@@ -264,11 +285,11 @@ export default function StudentsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
             Print
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
@@ -276,7 +297,7 @@ export default function StudentsPage() {
       }
     >
       {/* Tabs and Search Bar */}
-      <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
+      <div className="flex items-center justify-between gap-4 mb-6 flex-wrap print:hidden">
         {/* Tabs */}
         <div className="flex gap-4">
           <button
@@ -308,10 +329,18 @@ export default function StudentsPage() {
               ? "Search by name, email, phone, location, or rank..."
               : "Search by name, phone, state, course, or rank..."}
             value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSearchChange(e.target.value)}
             className="pl-10 pr-4 w-full"
           />
         </div>
+      </div>
+
+      {/* Print Only Title */}
+      <div className="hidden print:block mb-8">
+        <h2 className="text-2xl font-bold text-slate-900">
+          {activeTab === 'details' ? 'Students List' : 'Callback Requests'}
+        </h2>
+        <p className="text-sm text-slate-500">Generated on {new Date().toLocaleDateString()}</p>
       </div>
 
       {/* Students Table */}
@@ -394,15 +423,17 @@ export default function StudentsPage() {
           </div>
 
           {/* Pagination */}
-          {!studentsLoading && filteredStudents.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={studentsTotalPages}
-              onPageChange={setCurrentPage}
-              itemsPerPage={itemsPerPage}
-              totalItems={studentsTotalItems}
-            />
-          )}
+          <div className="print:hidden">
+            {!studentsLoading && filteredStudents.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={studentsTotalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={studentsTotalItems}
+              />
+            )}
+          </div>
         </div>
       )}
 
@@ -471,15 +502,17 @@ export default function StudentsPage() {
           </div>
 
           {/* Pagination */}
-          {!leadsLoading && filteredLeads.length > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={leadsTotalPages}
-              onPageChange={setCurrentPage}
-              itemsPerPage={itemsPerPage}
-              totalItems={leadsTotalItems}
-            />
-          )}
+          <div className="print:hidden">
+            {!leadsLoading && filteredLeads.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={leadsTotalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={leadsTotalItems}
+              />
+            )}
+          </div>
         </div>
       )}
 
@@ -555,7 +588,7 @@ export default function StudentsPage() {
                 <div className="mt-4">
                   <p className="text-slate-500 text-sm mb-2">Interested Study Locations</p>
                   <div className="grid grid-cols-3 gap-4 text-sm">
-                    {selectedStudent.interestedLocations?.slice(0, 3).map((loc, i) => (
+                    {selectedStudent.interestedLocations?.slice(0, 3).map((loc : any, i : any) => (
                       <div key={i}>
                         <p className="text-slate-400 text-xs">{i + 1}{i === 0 ? 'st' : i === 1 ? 'nd' : 'rd'} Preference</p>
                         <p className="font-medium">{loc}</p>
@@ -581,8 +614,12 @@ export default function StudentsPage() {
                 <p className="text-slate-700">{selectedLead.studentState}</p>
               </div>
 
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Assign Callback Request</h3>
-              <p className="text-sm text-slate-500 mb-4">Select an admin to assign the callback request</p>
+              <DialogHeader>
+                <DialogTitle className="text-lg font-semibold text-slate-900 mb-2">Assign Callback Request</DialogTitle>
+                <DialogDescription>
+                  Select an admin to assign the callback request
+                </DialogDescription>
+              </DialogHeader>
 
               <div className="space-y-3 max-h-64 overflow-y-auto">
                 {admins.map((admin: any) => (

@@ -85,6 +85,7 @@ export function CallbackModal({
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md">
+          <DialogTitle className="sr-only">Checking callback status</DialogTitle>
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
           </div>

@@ -1,43 +1,47 @@
 import * as XLSX from 'xlsx';
-import { adminDb } from '../firebase/admin';
-import { COLLECTIONS } from '../constants';
+import dbConnect from '../mongodb';
+import { UploadLogModel } from '@/models/UploadLog';
 import {
   ExcelUploadLog,
   CollegeRankCutoff,
 } from '@/types';
-import { Timestamp } from 'firebase-admin/firestore';
-import { bulkCreateCutoffs, deleteCutoffsByYear, syncCourses, syncLocations } from './colleges';
-
-const uploadsCollection = adminDb.collection(COLLECTIONS.EXCEL_UPLOAD_LOGS);
+import { bulkCreateCutoffs, bulkUpsertCutoffs, getCutoffsByYear, syncCourses, syncLocations } from './colleges';
 
 // Expected column headers in the Excel file
 const EXPECTED_COLUMNS = [
-  'College Name',
-  'Category',
-  'Course Name',
-  'Course Code',
   'All India Rank',
-  'Course Fee',
+  'Quota',
+  'College Type',
+  'College Name',
+  'State',
+  'City',
+  'Course Name',
+  'Allotted Category',
+  'Course_fees',
 ] as const;
 
 interface ExcelRow {
-  'College Name': string;
-  'Location'?: string;
-  'Type'?: string;
-  'Category': string;
-  'Course Name': string;
-  'Course Code': string;
+  'SI No'?: number;
   'All India Rank': number;
-  'Course Fee'?: number;
+  'Quota': string;
+  'College Type': string;
+  'College Name': string;
+  'State': string;
+  'City': string;
+  'Course Name': string;
+  'Allotted Category': string;
+  'Course_fees': number;
 }
 
 interface NormalizedCutoff {
   collegeName: string;
   collegeLocation: string;
   collegeType: string;
+  quota: string;
+  city: string;
+  state: string;
   courseName: string;
-  courseCode: string;
-  courseFee: number;
+  courseFees: number;
   category: string;
   rank: number;
   year: number;
@@ -52,21 +56,21 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): { valid: b
   if (!row['College Name']) {
     errors.push(`Row ${rowIndex}: Missing College Name`);
   }
-
-  if (!row['Category']) {
-    errors.push(`Row ${rowIndex}: Missing Category`);
+  if (!row['Allotted Category']) {
+    errors.push(`Row ${rowIndex}: Missing Allotted Category`);
   }
   if (!row['Course Name']) {
     errors.push(`Row ${rowIndex}: Missing Course Name`);
   }
-  if (!row['Course Code']) {
-    errors.push(`Row ${rowIndex}: Missing Course Code`);
-  }
-  if (!row['All India Rank'] || isNaN(Number(row['All India Rank']))) {
+  const rankStr = row['All India Rank'];
+  if (rankStr === undefined || rankStr === null || isNaN(Number(rankStr))) {
     errors.push(`Row ${rowIndex}: Invalid All India Rank`);
   }
-  if (!row['Course Fee'] || isNaN(Number(row['Course Fee']))) {
-    errors.push(`Row ${rowIndex}: Invalid Course Fee`);
+  if (row['Course_fees'] !== undefined && isNaN(Number(row['Course_fees']))) {
+    errors.push(`Row ${rowIndex}: Invalid Course Fees`);
+  }
+  if (!row['State']) {
+    errors.push(`Row ${rowIndex}: Missing State`);
   }
 
   return {
@@ -78,23 +82,47 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): { valid: b
 /**
  * Normalize Excel data in memory - takes LAST occurrence for each unique combination
  */
-function normalizeExcelData(rows: ExcelRow[], year: number): NormalizedCutoff[] {
+function normalizeExcelData(rows: any[], year: number): NormalizedCutoff[] {
   const map = new Map<string, NormalizedCutoff>();
 
   for (const row of rows) {
+    const collegeName = (row['College Name'] || row['collegeName'] || '').toString().trim();
+    const courseName = (row['Course Name'] || row['courseName'] || '').toString().trim();
+    const category = (row['Allotted Category'] || row['category'] || '').toString().trim();
+    
+    if (!collegeName || !courseName) continue;
+
     // Create unique key for deduplication
-    const key = `${row['College Name']}|${row['Course Name']}|${row['Category']}`;
+    const key = `${collegeName}|${courseName}|${category}`;
 
     // Always overwrite with later row (last wins)
+    const city = (row['City'] || '').toString().trim();
+    const state = (row['State'] || '').toString().trim();
+    
+    // Normalize college type based on instructions:
+    // 'government' (govt), 'private', 'deemed' (private university)
+    const rawType = (row['College Type'] || row['collegeType'] || '').toString().trim().toLowerCase();
+    let normalizedType = rawType;
+    
+    if (rawType.includes('govt')) {
+      normalizedType = 'government';
+    } else if (rawType.includes('private university') || rawType.includes('deemed')) {
+      normalizedType = 'deemed';
+    } else if (rawType.includes('private')) {
+      normalizedType = 'private';
+    }
+    
     map.set(key, {
-      collegeName: row['College Name'],
-      collegeLocation: row['Location']?.trim() || '',
-      collegeType: row['Type']?.trim() || '', // Store as-is, no normalization
-      courseName: row['Course Name'],
-      courseCode: row['Course Code'],
-      courseFee: Number(row['Course Fee']),
-      category: row['Category'],
-      rank: Number(row['All India Rank']),
+      collegeName: collegeName,
+      collegeLocation: city ? `${city}, ${state}` : state,
+      collegeType: normalizedType,
+      quota: (row['Quota'] || '').toString().trim() || '',
+      city: (row['City'] || '').toString().trim() || '',
+      state: (row['State'] || '').toString().trim() || '',
+      courseName: courseName,
+      courseFees: Number(row['Course_fees'] || row['Course Fee'] || 0) || 0,
+      category: category,
+      rank: Number(row['All India Rank'] || row['rank'] || 0),
       year,
     });
   }
@@ -109,9 +137,12 @@ function extractLocations(rows: ExcelRow[]): string[] {
   const locations = new Set<string>();
 
   for (const row of rows) {
-    const location = row['Location']?.trim();
-    if (location) {
-      locations.add(location);
+    const city = row['City']?.toString().trim();
+    const state = row['State']?.toString().trim();
+    if (city && state) {
+      locations.add(`${city}, ${state}`);
+    } else if (state) {
+      locations.add(state);
     }
   }
 
@@ -134,6 +165,26 @@ function extractCourses(rows: ExcelRow[]): string[] {
   return Array.from(courses);
 }
 
+function mapLog(doc: any): ExcelUploadLog {
+  const data = doc.toObject ? doc.toObject() : doc;
+  return {
+    id: data._id.toString(),
+    uploadedBy: data.uploadedBy,
+    year: data.year,
+    fileName: data.fileName,
+    totalRows: data.totalRows,
+    processedRows: data.processedRows,
+    insertedCount: data.insertedCount || 0,
+    updatedCount: data.updatedCount || 0,
+    skippedCount: data.skippedCount || 0,
+    failedRows: data.failedRows,
+    errorLog: data.errorLog,
+    status: data.status,
+    createdAt: data.createdAt,
+    completedAt: data.completedAt,
+  } as ExcelUploadLog;
+}
+
 /**
  * Create upload log
  */
@@ -143,9 +194,9 @@ export async function createUploadLog(
   fileName: string,
   totalRows: number
 ): Promise<ExcelUploadLog> {
-  const now = Timestamp.now();
-
-  const log: Omit<ExcelUploadLog, 'id'> = {
+  await dbConnect();
+  
+  const log = await UploadLogModel.create({
     uploadedBy,
     year,
     fileName,
@@ -154,13 +205,10 @@ export async function createUploadLog(
     failedRows: 0,
     errorLog: [],
     status: 'processing',
-    createdAt: now,
     completedAt: null,
-  };
+  });
 
-  const docRef = await uploadsCollection.add(log);
-
-  return { id: docRef.id, ...log } as ExcelUploadLog;
+  return mapLog(log);
 }
 
 /**
@@ -170,7 +218,8 @@ export async function updateUploadLog(
   id: string,
   data: Partial<ExcelUploadLog>
 ): Promise<void> {
-  await uploadsCollection.doc(id).update(data);
+  await dbConnect();
+  await UploadLogModel.findByIdAndUpdate(id, data);
 }
 
 /**
@@ -192,88 +241,192 @@ export async function processExcelUpload(
     throw new Error('Excel file is empty');
   }
 
-  // Validate headers
+  // Validate headers (Case-insensitive and trim spaces)
   const firstRow = rows[0];
-  const headers = Object.keys(firstRow);
-  const missingColumns = EXPECTED_COLUMNS.filter(col => !headers.includes(col));
+  const actualHeaders = Object.keys(firstRow).map(h => h.trim().toLowerCase());
+  const missingColumns = EXPECTED_COLUMNS.filter(col => {
+    const normalizedCol = col.trim().toLowerCase();
+    return !actualHeaders.includes(normalizedCol);
+  });
 
   if (missingColumns.length > 0) {
+    // Try to find the closest match for the error message
     throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
   }
 
+  // Create a mapping of expected columns to actual header keys found in the file
+  const headerMap: Record<string, string> = {};
+  const actualKeys = Object.keys(firstRow);
+  EXPECTED_COLUMNS.forEach(col => {
+    const normalizedCol = col.trim().toLowerCase();
+    const actualKey = actualKeys.find(k => k.trim().toLowerCase() === normalizedCol);
+    if (actualKey) {
+      headerMap[col] = actualKey;
+    }
+  });
+
   // Create upload log
-  const uploadLog = await createUploadLog(uploadedBy, year, fileName, rows.length);
+  let uploadLog = await createUploadLog(uploadedBy, year, fileName, rows.length);
 
   const errorLog: string[] = [];
-  let validRows: ExcelRow[] = [];
+  let validRows: any[] = [];
   let failedRows = 0;
 
   try {
-    // Step 1: Validate all rows
+    // Step 1: Validate all rows using the headerMap
     for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      const rowIndex = i + 2; // Excel rows are 1-indexed, plus header
+      const rawRow = rows[i] as any;
+      const rowIndex = i + 2;
 
-      const validation = validateRow(row as unknown as Record<string, unknown>, rowIndex);
+      // Remap raw row keys to expected column names for validation and normalization
+      const mappedRow: any = {};
+      EXPECTED_COLUMNS.forEach(col => {
+        mappedRow[col] = rawRow[headerMap[col]];
+      });
+      // Add SI No if it exists
+      if (rawRow['SI No']) mappedRow['SI No'] = rawRow['SI No'];
+      if (rawRow['SI. No']) mappedRow['SI No'] = rawRow['SI. No'];
+      if (rawRow['S.No']) mappedRow['SI No'] = rawRow['S.No'];
+      if (rawRow['Sl No']) mappedRow['SI No'] = rawRow['Sl No'];
+      if (rawRow['Sl. No']) mappedRow['SI No'] = rawRow['Sl. No'];
+      if (rawRow['Sr No']) mappedRow['SI No'] = rawRow['Sr No'];
+      if (rawRow['Sr. No']) mappedRow['SI No'] = rawRow['Sr. No'];
+
+      const validation = validateRow(mappedRow, rowIndex);
 
       if (!validation.valid) {
         errorLog.push(...validation.errors);
         failedRows++;
       } else {
-        validRows.push(row);
+        validRows.push(mappedRow);
       }
     }
 
-    // Step 2: Normalize data in memory (take last occurrence for duplicates)
-    const normalizedData = normalizeExcelData(validRows, year);
+    console.log(`DEBUG: Total rows in Excel: ${rows.length}`);
+    console.log(`DEBUG: Failed validation: ${failedRows}`);
+    console.log(`DEBUG: Valid rows for processing: ${validRows.length}`);
 
-    // Step 3: Extract unique locations and courses
+    // Step 2: Normalize data (validRows are now already mapped to EXPECTED_COLUMNS keys)
+    const normalizedData = normalizeExcelData(validRows, year);
+    console.log(`DEBUG: Rows after deduplication: ${normalizedData.length}`);
+
+    // Step 3: Extract unique locations and courses (Still here for compatibility with callers, handled automatically by MongoDB distincts)
     const locations = extractLocations(rows);
     const courses = extractCourses(rows);
 
-    // Step 4: Delete existing cutoffs for this year (replace mode)
-    await deleteCutoffsByYear(year);
+    // Step 4: Refactored: Fetch all existing MongoDB records for this year for in-memory comparison
+    console.log(`DEBUG: Fetching existing cutoffs for year ${year}...`);
+    const existingCutoffs = await getCutoffsByYear(year);
+    
+    // Build an in-memory Map for existing DB records using a unique key
+    const dbMap = new Map<string, CollegeRankCutoff>();
+    existingCutoffs.forEach(item => {
+      const key = `${item.collegeName}|${item.courseName}|${item.category}|${item.year}`;
+      dbMap.set(key, item);
+    });
 
-    // Step 5: Bulk insert normalized cutoffs
-    const cutoffsToInsert: Omit<CollegeRankCutoff, 'id' | 'createdAt'>[] = normalizedData.map(item => ({
-      collegeName: item.collegeName,
-      collegeLocation: item.collegeLocation,
-      collegeType: item.collegeType as CollegeRankCutoff['collegeType'],
-      courseName: item.courseName,
-      courseCode: item.courseCode,
-      year: item.year,
-      category: item.category,
-      rank: item.rank,
-    }));
+    // Build another Map for normalized Excel data
+    const excelMap = new Map<string, NormalizedCutoff>();
+    normalizedData.forEach(item => {
+      const key = `${item.collegeName}|${item.courseName}|${item.category}|${item.year}`;
+      excelMap.set(key, item);
+    });
 
-    const insertedCount = await bulkCreateCutoffs(cutoffsToInsert);
+    const bulkOps: any[] = [];
+    let insertedCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
 
-    // Step 6: Sync locations and courses
+    // Step 5: Compare both datasets and build bulk operations
+    for (const [key, excelItem] of excelMap.entries()) {
+      const dbItem = dbMap.get(key);
+
+      if (!dbItem) {
+        // CASE: Key exists only in Excel -> INSERT
+        insertedCount++;
+        bulkOps.push({
+          updateOne: {
+            filter: { 
+              collegeName: excelItem.collegeName, 
+              courseName: excelItem.courseName, 
+              category: excelItem.category, 
+              year: excelItem.year 
+            },
+            update: { $set: { ...excelItem, createdAt: new Date() } },
+            upsert: true
+          }
+        });
+      } else {
+        // CASE: Key exists in both -> Check for changes
+        const isChanged = (
+          dbItem.rank !== excelItem.rank ||
+          dbItem.courseFees !== excelItem.courseFees ||
+          dbItem.collegeType !== excelItem.collegeType ||
+          dbItem.quota !== excelItem.quota ||
+          dbItem.city !== excelItem.city ||
+          dbItem.state !== excelItem.state ||
+          dbItem.collegeLocation !== excelItem.collegeLocation
+        );
+
+        if (isChanged) {
+          // UPDATE
+          updatedCount++;
+          bulkOps.push({
+            updateOne: {
+              filter: { 
+                collegeName: excelItem.collegeName, 
+                courseName: excelItem.courseName, 
+                category: excelItem.category, 
+                year: excelItem.year 
+              },
+              update: { $set: excelItem },
+              upsert: true
+            }
+          });
+        } else {
+          // SKIP/UNCHANGED
+          skippedCount++;
+        }
+      }
+    }
+
+    console.log(`DEBUG: Stats: INSERTED=${insertedCount}, UPDATED=${updatedCount}, SKIPPED=${skippedCount}`);
+
+    // Step 6: Execute bulk write if there are operations
+    let finalProcessedCount = 0;
+    if (bulkOps.length > 0) {
+      const { insertedCount, modifiedCount, upsertedCount } = await bulkUpsertCutoffs(bulkOps);
+      finalProcessedCount = insertedCount + modifiedCount + upsertedCount;
+      console.log(`DEBUG: bulkWrite Result: Inserted=${insertedCount}, Modified=${modifiedCount}, Upserted=${upsertedCount}`);
+    }
+
+    // Step 7: Sync locations and courses (Trigger the legacy stubs)
     await syncLocations(locations);
     await syncCourses(courses);
 
     // Final update
-    await updateUploadLog(uploadLog.id, {
-      processedRows: insertedCount,
+    const updateData = {
+      processedRows: insertedCount + updatedCount,
+      insertedCount,
+      updatedCount,
+      skippedCount,
       failedRows,
       errorLog,
       status: failedRows === rows.length ? 'failed' : 'completed',
-      completedAt: Timestamp.now(),
-    });
+      completedAt: new Date(),
+    } as any;
+    
+    await updateUploadLog(uploadLog.id, updateData);
 
     return {
       ...uploadLog,
-      processedRows: insertedCount,
-      failedRows,
-      errorLog,
-      status: failedRows === rows.length ? 'failed' : 'completed',
-      completedAt: Timestamp.now(),
+      ...updateData
     };
   } catch (error) {
     await updateUploadLog(uploadLog.id, {
       status: 'failed',
       errorLog: [...errorLog, (error as Error).message],
-      completedAt: Timestamp.now(),
+      completedAt: new Date() as any,
     });
 
     throw error;
@@ -288,34 +441,38 @@ export async function getUploadLogs(options: {
   status?: ExcelUploadLog['status'];
   limit?: number;
 } = {}): Promise<ExcelUploadLog[]> {
-  let query = uploadsCollection.orderBy('createdAt', 'desc');
+  await dbConnect();
+
+  let query: any = {};
 
   if (options.year) {
-    query = query.where('year', '==', options.year);
+    query.year = options.year;
   }
 
   if (options.status) {
-    query = query.where('status', '==', options.status);
+    query.status = options.status;
   }
 
+  let dbQuery = UploadLogModel.find(query).sort({ createdAt: -1 });
+  
   if (options.limit) {
-    query = query.limit(options.limit);
+    dbQuery = dbQuery.limit(options.limit);
   }
 
-  const snapshot = await query.get();
-
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExcelUploadLog));
+  const logs = await dbQuery.exec();
+  return logs.map(mapLog);
 }
 
 /**
  * Get upload log by ID
  */
 export async function getUploadLogById(id: string): Promise<ExcelUploadLog | null> {
-  const doc = await uploadsCollection.doc(id).get();
-
-  if (!doc.exists) {
+  await dbConnect();
+  
+  const doc = await UploadLogModel.findById(id);
+  if (!doc) {
     return null;
   }
 
-  return { id: doc.id, ...doc.data() } as ExcelUploadLog;
+  return mapLog(doc);
 }
