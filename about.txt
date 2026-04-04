@@ -1,0 +1,45 @@
+Here is a complete, high-level breakdown of the Rankers Forum project based on its structure, design, and internal logic. I've explained the architecture, the user roles, the core features, and the data models.
+
+1. What is this Project?
+Rankers Forum is a full-stack educational consulting and counseling platform. It is designed to bridge the gap between students (who want to know which colleges they can get into based on their test ranks) and counseling administrators (who guide these students as sales "leads").
+
+It combines college prediction mechanics with a fully functioning Customer Relationship Management (CRM) tool for the staff.
+
+2. High-Level Technology Stack
+Frontend & Backend Framework: Next.js 15 (App Router). This is a monolithic structure where both the user interface and the server backend APIs live in the same project.
+Styling: Tailwind CSS (v4) with Shadcn UI (Radix base) for sleek, accessible, and modern pre-built UI components.
+State Management: React Query (Tanstack Query) is heavily used to fetch, cache, and manage server data dynamically on the frontend. Form validations are handled using React Hook Form and Zod/Yup.
+Current Database & Auth: Firebase. It uses Firebase Authentication for handling user logins, and Firestore (NoSQL) as the primary database. It accesses Firebase both on the frontend (Client SDK) and in the backend (Admin SDK).
+Data Processing: The app uses an Excel parsing library (xlsx) to handle massive college cutoff datasheets.
+3. User Roles (RBAC)
+The application relies strictly on Role-Based Access Control, split into three categories via Next.js Middleware:
+
+Student (End User): They have access to the public site and their personal dashboard. They enter their exam data and browse colleges.
+Admin (Employee/Counselor): They have a completely different portal (/admin). They are essentially sales representatives or counselors. They get assigned "leads" (students), track their calls, follow up, and update statuses.
+Super Admin: The highest tier (/super-admin). They can create new Admin profiles, monitor the whole system, upload new batches of college excel data, and view site-wide statistics.
+4. Core Modules & Features
+Here is how the platform actually flows feature by feature:
+
+College Prediction Engine: Super Admins can upload large Excel files (like collegeWithRandSheet.xlsx) containing thousands of past college branch cutoffs. The system parses this sheet and stores every row in the database. When a student logs in, the engine compares the student's rank against the database, categorizing their chances of admission into High, Moderate, Low, or Not Eligible.
+Student Profiling: When a student creates an account, they provide rich data: their exam Rank, Year of Passing, Category, Domicile State, Gender, and 3 Location Prefernces.
+Lead System (CRM): Whenever a student requests a callback or creates an account, an internal Lead is generated. These leads are distributed among the Admins. Admins are restricted by HR metrics like maxActiveLeads.
+Follow-up Tracking: An Admin can view their assigned leads, contact the student, leave "Remarks", and set a nextCallbackDate. The system tracks the lifecycle of a lead from new -> in_progress -> completed -> closed.
+5. Current Database Structure (Firestore)
+Before migrating to MongoDB, it's crucial to understand how the data is currently modeled in Firestore. Because Firestore is NoSQL and charges per read, the data relies heavily on denormalization (copying data into multiple places to avoid complex joins).
+
+Here are the main data collections:
+
+users: Contains the base auth info (Role, First Name, Email, Phone, isActive).
+students: Linked strictly to a user. Contains all the educational data (Rank, Demographics, Check limits).
+admin_profiles: Linked to an admin user. Contains HR data (Job Title, Date of Joining, Max Active capacity).
+colleges_cutoffs: The massive list of colleges, containing the college name, location, course name, category, and rank threshold.
+leads: Connects an Admin and a Student. Note: Currently, the student's name, email, and phone are duplicated directly onto the Lead document so Firebase doesn't have to fetch the Student document separately.
+lead_followups: Sub-records containing the communication history (remarks, next call dates) between an admin and a lead.
+stats & uploads: Analytics documents holding overarching numbers (total registrations, pending callbacks) and logs of Excel uploads.
+6. Preparation for MongoDB Migration
+Since your ultimate goal is to migrate from Firebase to MongoDB, here are a few structural hints based on how the project is built:
+
+Separation of Concerns: The project's data logic is perfectly decoupled. All database reads and writes are isolated inside the src/lib/services/ folder (users.ts, leads.ts, colleges.ts, etc.). This is great news. You won't have to hunt for database calls inside UI components; you just need to rewrite those specific service files using Mongoose or Prisma.
+Relational Data: In Firestore, as stated, data is duplicated in the Lead type to save reads. With MongoDB, you will define strict Schemas. You will no longer need to strictly duplicate studentName into the Lead document; instead, you will use MongoDB's .populate() (or SQL-like joins) via ObjectIds to pull the connected user dynamically.
+Authentication: Right now, APIs verify tokens via Firebase Admin. When migrating to MongoDB, you'll need to decide if you are keeping Firebase Auth just for logging in, or if you will rip it out entirely and replace it with something like NextAuth.js backed by MongoDB.
+Let me know if you would like me to begin the migration process, draft a step-by-step roadmap for moving over to MongoDB, or dive deeper into any specific aspect of the Next.js frontend!
