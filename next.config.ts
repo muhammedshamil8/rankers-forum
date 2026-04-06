@@ -14,7 +14,9 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        source: '/:path((?!^$).*)',
+        // Catch-all rewrite for client-side routing (SPA fallback)
+        // Excludes: /api/*, /_next/*, /favicon.ico, and static files with extensions
+        source: '/:path((?!api|_next|favicon\\.ico|.*\\..*).*)',
         destination: '/',
       },
     ];

@@ -6,6 +6,11 @@ export type LeadStatus = 'new' | 'assigned' | 'in_progress' | 'completed' | 'clo
 
 export interface ILead extends Document {
   studentId: string; // Firebase UID
+  // Denormalized student info for display in admin panels
+  studentName: string;
+  studentPhone: string;
+  studentEmail: string;
+  studentLocation: string;
   rankUsed: number;
   preferredBranch: string;
   year: number;
@@ -20,6 +25,11 @@ export interface ILead extends Document {
 const LeadSchema = new Schema<ILead>(
   {
     studentId: { type: String, required: true }, // References User._id (Firebase UID)
+    // Denormalized student info — stored at lead creation time so admin panels work without joins
+    studentName: { type: String, default: '' },
+    studentPhone: { type: String, default: '' },
+    studentEmail: { type: String, default: '' },
+    studentLocation: { type: String, default: '' },
     rankUsed: { type: Number, required: true },
     preferredBranch: { type: String, required: true },
     year: { type: Number, required: true },

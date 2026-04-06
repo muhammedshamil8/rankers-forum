@@ -12,6 +12,11 @@ function mapLead(doc: any): Lead {
   return {
     id: data._id.toString(),
     studentId: data.studentId.toString(),
+    // Denormalized student info
+    studentName: data.studentName || '',
+    studentPhone: data.studentPhone || '',
+    studentEmail: data.studentEmail || '',
+    studentLocation: data.studentLocation || '',
     rankUsed: data.rankUsed,
     preferredBranch: data.preferredBranch,
     year: data.year,

@@ -90,6 +90,9 @@ export default function StudentInfoPage() {
     },
   });
   const courses = coursesData?.courses || [];
+  const student = profileData?.student;
+  const profileIsComplete = !!student && (student.rank > 0 || student.isProfileComplete);
+
   const submitMutation = useMutation({
     mutationFn: async (data: any) => {
       // First save profile
@@ -116,9 +119,10 @@ export default function StudentInfoPage() {
         throw new Error(error.error || 'Failed to save profile');
       }
 
-      // Then get eligible colleges
+      // Then get eligible colleges — track=true increments checksUsed and creates lead
       const params = new URLSearchParams({
         domicileState: data.domicileState,
+        track: 'true',
       });
 
       const collegesResponse = await fetch(`/api/colleges/eligible?${params}`);
@@ -139,19 +143,20 @@ export default function StudentInfoPage() {
   // Formik setup
   const formik = useFormik({
     initialValues: {
-      rank: '',
-      institution: '',
-      year: currentYear.toString(),
-      domicileState: '',
-      category: '',
-      gender: '',
-      counsellingType: '',
-      preferredBranch: '',
-      preference1: '',
-      preference2: '',
-      preference3: '',
-      confirmAccuracy: false,
+      rank: student?.rank?.toString() || '',
+      institution: student?.institution || '',
+      year: student?.yearOfPassing?.toString() || currentYear.toString(),
+      domicileState: student?.domicileState || '',
+      category: student?.category || '',
+      gender: student?.gender || '',
+      counsellingType: student?.counsellingType || '',
+      preferredBranch: student?.preferredBranch || '',
+      preference1: student?.locationPreference1 || '',
+      preference2: student?.locationPreference2 || '',
+      preference3: student?.locationPreference3 || '',
+      confirmAccuracy: profileIsComplete ? true : false,
     },
+    enableReinitialize: true, // re-populate when profileData loads
     validationSchema: studentInfoSchema,
     validateOnChange: true,
     validateOnBlur: true,
@@ -183,7 +188,7 @@ export default function StudentInfoPage() {
     }
   }, [authLoading, isAuthorized, router]);
 
-  if (authLoading || !isAuthorized) {
+  if (authLoading || !isAuthorized || !profileData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
@@ -191,7 +196,7 @@ export default function StudentInfoPage() {
     );
   }
 
-  const checksRemaining = 2 - (profileData?.student?.checksCount || 0);
+  const checksRemaining = 2 - (student?.checksUsed || 0);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -199,10 +204,21 @@ export default function StudentInfoPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-[#1E1E1E]">Enter Your Details</h1>
-          <p className="text-amber-600 flex items-center gap-2 mt-2 text-sm">
-            <AlertTriangle className="h-4 w-4" />
-            Please enter your details carefully! Once Saved, They Cannot Be Edited Or Updated Later.
-          </p>
+          {profileIsComplete ? (
+            <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <svg className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm text-blue-700">
+                Your details have been saved and <strong>cannot be changed</strong>. View your college predictions below.
+              </p>
+            </div>
+          ) : (
+            <p className="text-amber-600 flex items-center gap-2 mt-2 text-sm">
+              <AlertTriangle className="h-4 w-4" />
+              Please enter your details carefully! Once Saved, They Cannot Be Edited Or Updated Later.
+            </p>
+          )}
         </div>
 
         <form onSubmit={formik.handleSubmit} className="space-y-10">
@@ -228,15 +244,16 @@ export default function StudentInfoPage() {
                   name="rank"
                   type="number"
                   placeholder="Enter Your Rank"
-                  className={`h-12 ${formik.touched.rank && formik.errors.rank ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                  className={`h-12 ${formik.touched.rank && formik.errors.rank ? 'border-red-500 focus-visible:ring-red-500' : ''} ${profileIsComplete ? 'bg-slate-50 cursor-not-allowed opacity-70' : ''}`}
                   value={formik.values.rank}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
+                  disabled={profileIsComplete}
                 />
                 {formik.touched.rank && formik.errors.rank && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
-                    {formik.errors.rank}
+                    {String(formik.errors.rank)}
                   </p>
                 )}
               </div>
@@ -251,10 +268,11 @@ export default function StudentInfoPage() {
                   id="institution"
                   name="institution"
                   placeholder="Enter the Institution"
-                  className="h-12"
+                  className={`h-12 ${profileIsComplete ? 'bg-slate-50 cursor-not-allowed opacity-70' : ''}`}
                   value={formik.values.institution}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
+                  disabled={profileIsComplete}
                 />
               </div>
 
@@ -267,6 +285,7 @@ export default function StudentInfoPage() {
                 <Select
                   value={formik.values.year}
                   onValueChange={(value) => formik.setFieldValue('year', value)}
+                  disabled={profileIsComplete}
                 >
                   <SelectTrigger className={`h-12 ${formik.touched.year && formik.errors.year ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Year of Passout" />
@@ -282,7 +301,7 @@ export default function StudentInfoPage() {
                 {formik.touched.year && formik.errors.year && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
-                    {formik.errors.year}
+                    {String(formik.errors.year)}
                   </p>
                 )}
               </div>
@@ -296,6 +315,7 @@ export default function StudentInfoPage() {
                 <Select
                   value={formik.values.domicileState}
                   onValueChange={(value) => formik.setFieldValue('domicileState', value)}
+                  disabled={profileIsComplete}
                 >
                   <SelectTrigger className={`h-12 ${formik.touched.domicileState && formik.errors.domicileState ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Your Domicile State" />
@@ -311,7 +331,7 @@ export default function StudentInfoPage() {
                 {formik.touched.domicileState && formik.errors.domicileState && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
-                    {formik.errors.domicileState}
+                    {String(formik.errors.domicileState)}
                   </p>
                 )}
               </div>
@@ -325,6 +345,7 @@ export default function StudentInfoPage() {
                 <Select
                   value={formik.values.category}
                   onValueChange={(value) => formik.setFieldValue('category', value)}
+                  disabled={profileIsComplete}
                 >
                   <SelectTrigger className={`h-12 ${formik.touched.category && formik.errors.category ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Category" />
@@ -340,7 +361,7 @@ export default function StudentInfoPage() {
                 {formik.touched.category && formik.errors.category && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
-                    {formik.errors.category}
+                    {String(formik.errors.category)}
                   </p>
                 )}
               </div>
@@ -354,6 +375,7 @@ export default function StudentInfoPage() {
                 <Select
                   value={formik.values.gender}
                   onValueChange={(value) => formik.setFieldValue('gender', value)}
+                  disabled={profileIsComplete}
                 >
                   <SelectTrigger className={`h-12 ${formik.touched.gender && formik.errors.gender ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Gender" />
@@ -369,7 +391,7 @@ export default function StudentInfoPage() {
                 {formik.touched.gender && formik.errors.gender && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
-                    {formik.errors.gender}
+                    {String(formik.errors.gender)}
                   </p>
                 )}
               </div>
@@ -390,6 +412,7 @@ export default function StudentInfoPage() {
                 <Select
                   value={formik.values.counsellingType}
                   onValueChange={(value) => formik.setFieldValue('counsellingType', value)}
+                  disabled={profileIsComplete}
                 >
                   <SelectTrigger className={`h-12 ${formik.touched.counsellingType && formik.errors.counsellingType ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Counselling Type" />
@@ -405,7 +428,7 @@ export default function StudentInfoPage() {
                 {formik.touched.counsellingType && formik.errors.counsellingType && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
-                    {formik.errors.counsellingType}
+                    {String(formik.errors.counsellingType)}
                   </p>
                 )}
               </div>
@@ -419,6 +442,7 @@ export default function StudentInfoPage() {
                 <Select
                   value={formik.values.preferredBranch}
                   onValueChange={(value) => formik.setFieldValue('preferredBranch', value)}
+                  disabled={profileIsComplete}
                 >
                   <SelectTrigger className={`h-12 ${formik.touched.preferredBranch && formik.errors.preferredBranch ? 'border-red-500' : ''}`}>
                     <SelectValue placeholder="Select Your Preferred Branch" />
@@ -440,7 +464,7 @@ export default function StudentInfoPage() {
                 {formik.touched.preferredBranch && formik.errors.preferredBranch && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
-                    {formik.errors.preferredBranch}
+                    {String(formik.errors.preferredBranch)}
                   </p>
                 )}
               </div>
@@ -459,6 +483,7 @@ export default function StudentInfoPage() {
                   <Select
                     value={formik.values.preference1}
                     onValueChange={(value) => formik.setFieldValue('preference1', value)}
+                    disabled={profileIsComplete}
                   >
                     <SelectTrigger className={`h-12 ${formik.touched.preference1 && formik.errors.preference1 ? 'border-red-500' : ''}`}>
                       <SelectValue placeholder="1st Preference *" />
@@ -480,7 +505,7 @@ export default function StudentInfoPage() {
                   {formik.touched.preference1 && formik.errors.preference1 && (
                     <p className="text-sm text-red-500 flex items-center gap-1">
                       <AlertTriangle className="h-3 w-3" />
-                      {formik.errors.preference1}
+                      {String(formik.errors.preference1)}
                     </p>
                   )}
                 </div>
@@ -490,6 +515,7 @@ export default function StudentInfoPage() {
                   <Select
                     value={formik.values.preference2}
                     onValueChange={(value) => formik.setFieldValue('preference2', value)}
+                    disabled={profileIsComplete}
                   >
                     <SelectTrigger className="h-12">
                       <SelectValue placeholder="2nd Preference" />
@@ -515,6 +541,7 @@ export default function StudentInfoPage() {
                   <Select
                     value={formik.values.preference3}
                     onValueChange={(value) => formik.setFieldValue('preference3', value)}
+                    disabled={profileIsComplete}
                   >
                     <SelectTrigger className="h-12">
                       <SelectValue placeholder="3rd Preference" />
@@ -538,53 +565,65 @@ export default function StudentInfoPage() {
             </div>
           </section>
 
-          {/* Confirmation */}
-          <div
-            className="space-y-2 transition-all duration-200 rounded-lg p-2 -m-2"
-            ref={(el) => { fieldRefs.current['confirmAccuracy'] = el; }}
-          >
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id="confirmAccuracy"
-                checked={formik.values.confirmAccuracy}
-                onCheckedChange={(checked) => formik.setFieldValue('confirmAccuracy', checked === true)}
-              />
-              <Label htmlFor="confirmAccuracy" className="text-sm text-slate-600 leading-relaxed cursor-pointer">
-                I confirm that all the information provided is accurate and final. I agree to proceed with the entered details. <span className="text-red-500">*</span>
-              </Label>
+          {!profileIsComplete && (
+            <div
+              className="space-y-2 transition-all duration-200 rounded-lg p-2 -m-2"
+              ref={(el) => { fieldRefs.current['confirmAccuracy'] = el; }}
+            >
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="confirmAccuracy"
+                  checked={formik.values.confirmAccuracy}
+                  onCheckedChange={(checked) => formik.setFieldValue('confirmAccuracy', checked === true)}
+                />
+                <Label htmlFor="confirmAccuracy" className="text-sm text-slate-600 leading-relaxed cursor-pointer">
+                  I confirm that all the information provided is accurate and final. I agree to proceed with the entered details. <span className="text-red-500">*</span>
+                </Label>
+              </div>
+              {formik.touched.confirmAccuracy && formik.errors.confirmAccuracy && (
+                <p className="text-sm text-red-500 flex items-center gap-1 ml-8">
+                  <AlertTriangle className="h-3 w-3" />
+                  {String(formik.errors.confirmAccuracy)}
+                </p>
+              )}
             </div>
-            {formik.touched.confirmAccuracy && formik.errors.confirmAccuracy && (
-              <p className="text-sm text-red-500 flex items-center gap-1 ml-8">
-                <AlertTriangle className="h-3 w-3" />
-                {formik.errors.confirmAccuracy}
-              </p>
+          )}
+
+          {/* Submit / View Results Button */}
+          <div className="flex justify-center pt-4">
+            {profileIsComplete ? (
+              <Button
+                type="button"
+                size="lg"
+                className="h-14 px-12 bg-gradient-to-r from-[#2F129B] to-[#6366F1] rounded-full font-normal text-base hover:shadow-lg transition-all"
+                onClick={() => router.push('/student/result')}
+              >
+                View My Results
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                size="lg"
+                className="h-14 px-12 bg-gradient-to-r from-[#2F129B] to-[#6366F1] rounded-full font-normal text-base hover:shadow-lg transition-all"
+                disabled={submitMutation.isPending || checksRemaining <= 0}
+              >
+                {submitMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    Save and Continue
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </>
+                )}
+              </Button>
             )}
           </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-center pt-4">
-            <Button
-              type="submit"
-              size="lg"
-              className="h-14 px-12 bg-gradient-to-r from-[#2F129B] to-[#6366F1] rounded-full 
-             font-normal text-base hover:shadow-lg transition-all"
-              disabled={submitMutation.isPending || checksRemaining <= 0}
-            >
-              {submitMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  Save and Continue
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </>
-              )}
-            </Button>
-          </div>
-
-          {checksRemaining <= 0 && (
+          {!profileIsComplete && checksRemaining <= 0 && (
             <p className="text-center text-amber-600 text-sm">
               You have used all your free checks. Contact support for more.
             </p>

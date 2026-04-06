@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2, AlertTriangle, ChevronDown, Building2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Loader2, AlertTriangle, Building2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -17,6 +16,7 @@ import { useAuth, useRequireAuth } from '@/lib/hooks';
 import { useQuery } from '@tanstack/react-query';
 import { INDIAN_STATES } from '@/lib/constants';
 import { LogoutModal } from '@/components/modals';
+import Image from 'next/image';
 
 interface College {
   id: string;
@@ -39,6 +39,17 @@ interface ResultData {
   rank: number;
 }
 
+/**
+ * Robust college type normalizer — handles all variants from DB
+ */
+function normalizeCollegeType(raw: string): 'government' | 'private' | 'deemed' | string {
+  const t = (raw || '').toLowerCase().trim();
+  if (t.includes('govt') || t.includes('government')) return 'government';
+  if (t.includes('private university') || t.includes('deemed')) return 'deemed';
+  if (t.includes('private')) return 'private';
+  return t;
+}
+
 export default function StudentResultPage() {
   const router = useRouter();
   const { loading: authLoading } = useAuth();
@@ -58,13 +69,10 @@ export default function StudentResultPage() {
         const parsed = JSON.parse(stored);
         if (parsed && ((parsed.colleges && parsed.colleges.length > 0) || (parsed.otherColleges && parsed.otherColleges.length > 0))) {
           setResultData(parsed);
-          console.log("DEBUG: Valid result found in session:", parsed.colleges?.length);
         } else {
-          console.log("DEBUG: Session data empty/invalid, ignoring");
           sessionStorage.removeItem('collegeResult');
         }
-      } catch (error) {
-        console.error("DEBUG: Session parse error:", error);
+      } catch {
         sessionStorage.removeItem('collegeResult');
       }
     }
@@ -85,7 +93,6 @@ export default function StudentResultPage() {
   const { data: fetchedResults, isLoading: isFetchingResults } = useQuery({
     queryKey: ['eligible-colleges-direct', profileData?.student?.domicileState],
     queryFn: async () => {
-      console.log("DEBUG: Fetching results from API for", profileData.student.domicileState);
       const params = new URLSearchParams({
         domicileState: profileData.student.domicileState,
       });
@@ -93,8 +100,8 @@ export default function StudentResultPage() {
       if (!resp.ok) throw new Error('API Failed');
       return resp.json();
     },
-    enabled: !!isAuthorized && !!profileData?.student && (!resultData || (resultData.colleges?.length === 0 && resultData.otherColleges?.length === 0)),
-    staleTime: 60000, // 1 minute
+    enabled: !!isAuthorized && !!profileData?.student && (!resultData || (resultData.colleges?.length === 0 && (resultData.otherColleges?.length ?? 0) === 0)),
+    staleTime: 60000,
   });
 
   useEffect(() => {
@@ -109,7 +116,7 @@ export default function StudentResultPage() {
   useEffect(() => {
     if (!isBusy && isAuthorized && !resultData && !isFetchingResults && !isProfileLoading) {
       const timer = setTimeout(() => {
-         if (!resultData) router.push('/student/info');
+        if (!resultData) router.push('/student/info');
       }, 5000);
       return () => clearTimeout(timer);
     }
@@ -117,7 +124,7 @@ export default function StudentResultPage() {
 
   if (isBusy) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
       </div>
     );
@@ -125,16 +132,16 @@ export default function StudentResultPage() {
 
   if (!resultData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
-           <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto" />
-           <p className="mt-4 text-slate-500">Retrieving your predictions...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto" />
+          <p className="mt-4 text-slate-500">Retrieving your predictions...</p>
         </div>
       </div>
     );
   }
 
-  // Deduplicate colleges (in case of overlap between colleges and otherColleges)
+  // Deduplicate and merge colleges
   const uniqueCollegesMap = new Map();
   [...(resultData.colleges || []), ...(resultData.otherColleges || [])].forEach((c: any) => {
     if (!uniqueCollegesMap.has(c.id)) {
@@ -146,31 +153,40 @@ export default function StudentResultPage() {
     }
   });
 
-  const allColleges = Array.from(uniqueCollegesMap.values());
+  const allColleges = Array.from(uniqueCollegesMap.values()) as College[];
 
   const filteredColleges = allColleges.filter(college => {
-    let type = (college.collegeType || '').toLowerCase();
-    let normalized = '';
-    if (type.includes('govt') || type.includes('government')) normalized = 'government';
-    else if (type.includes('private university') || type.includes('deemed')) normalized = 'deemed';
-    else if (type.includes('private')) normalized = 'private';
-    else normalized = type;
-
+    const normalized = normalizeCollegeType(college.collegeType);
     const matchesType = normalized === activeTab;
     const matchesState = stateFilter === 'all' || (college.collegeLocation && college.collegeLocation.includes(stateFilter));
-    
     return matchesType && matchesState;
   });
 
+  const displayYear = resultData.currentYear || resultData.year || new Date().getFullYear();
+
+  const getChanceBadge = (chance: string) => {
+    switch (chance) {
+      case 'high':
+        return <Badge className="bg-green-50 text-green-500 border-green-200 hover:bg-green-50 text-xs font-normal">High Chance</Badge>;
+      case 'moderate':
+        return <Badge className="bg-amber-50 text-amber-500 border-amber-200 hover:bg-amber-50 text-xs font-normal">Moderate Chance</Badge>;
+      case 'low':
+        return <Badge className="bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-100 text-xs font-normal">Low Chance</Badge>;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-white">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Title and Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My Eligible College List</h1>
-            <p className="text-amber-600 flex items-center gap-2 mt-1 text-sm">
+            <h1 className="text-2xl sm:text-[26px] font-medium text-slate-900">My Eligible College List</h1>
+            <p className="text-amber-600 flex items-center gap-2 mt-1 text-xs">
               <AlertTriangle className="h-4 w-4" />
-              Estimates based on past data.
+              The college list is generated using historical counselling data and is for reference purpose only.
             </p>
           </div>
 
@@ -190,7 +206,8 @@ export default function StudentResultPage() {
           </div>
         </div>
 
-        <div className="flex gap-2 mb-6">
+        {/* Tabs — gradient style matching previous-year page */}
+        <div className="flex border w-fit rounded-[8px] p-1 gap-2 mb-6">
           {[
             { value: 'government', label: 'Government' },
             { value: 'private', label: 'Private' },
@@ -198,68 +215,139 @@ export default function StudentResultPage() {
           ].map((tab) => (
             <button
               key={tab.value}
-              onClick={() => setActiveTab(tab.value as any)}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === tab.value
-                ? 'bg-indigo-600 text-white'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                }`}
+              onClick={() => setActiveTab(tab.value as typeof activeTab)}
+              className={`px-5 py-2 rounded-[8px] cursor-pointer text-xs md:text-sm font-medium transition-colors ${
+                activeTab === tab.value
+                  ? 'bg-linear-to-r from-[#2F129B] to-[#3B82F6] text-white'
+                  : 'text-slate-600 hover:bg-white'
+              }`}
             >
               {tab.label}
             </button>
           ))}
         </div>
 
-        <p className="text-slate-600 mb-4">Year: {resultData.currentYear || resultData.year || '2024'}</p>
+        {/* Year label */}
+        <p className="text-slate-600 text-sm mb-6">
+          Current Year Predictions — <span className="font-medium">{displayYear}</span>
+        </p>
 
+        {/* College List */}
         {filteredColleges.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {filteredColleges.map((college) => (
-              <div key={college.id} className="bg-white rounded-xl border border-slate-100 overflow-hidden">
-                <div className="flex items-center p-5">
-                   <div className="flex-1">
-                    <h3 className="font-semibold text-slate-900 text-lg">{college.collegeName}</h3>
-                    <p className="text-slate-500 text-sm">{college.collegeLocation}</p>
+              <div
+                key={college.id}
+                className="bg-[#F9FAFB] rounded-xl border border-[#9FA6B2]/60 overflow-hidden"
+              >
+                <div className="grid gap-y-4 lg:grid-cols-2 p-3 md:p-5">
+
+                  {/* College Info */}
+                  <div className="flex-1 flex justify-between h-full">
+                    <div className="flex flex-col justify-center">
+                      <h3 className="font-semibold text-[#4B5563] text-sm">{college.collegeName}</h3>
+                      <p className="text-[#4B5563] text-sm">{college.collegeLocation}</p>
+                    </div>
+                    {/* Actions — mobile */}
+                    <div className="md:hidden flex flex-col items-center gap-2 ml-6">
+                      {getChanceBadge(college.chance)}
+                      <button
+                        onClick={() => setExpandedCollege(expandedCollege === college.id ? null : college.id)}
+                        className="flex items-center gap-1 rounded-[8px] cursor-pointer py-1 px-2 border-2 border-[#3B82F6]/80 text-xs text-indigo-600 hover:text-indigo-700"
+                      >
+                        <Image src="/fileIcon.svg" alt="fileIcon" width={20} height={20} />
+                        View Details
+                      </button>
+                    </div>
                   </div>
-                  <div className="hidden sm:grid grid-cols-3 gap-8 text-center px-4">
-                    <div>
-                      <p className="text-xs text-slate-400">Quota</p>
-                      <p className="text-sm font-medium">{college.quota?.replace('_', ' ') || 'All India'}</p>
+
+                  <div className="flex items-center h-full justify-between">
+                    {/* Details Grid */}
+                    <div className="h-full grid grid-cols-4 gap-1 md:gap-3 text-center">
+                      <div className="bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full">
+                        <p className="text-[11px] md:text-xs text-slate-400 mb-1">Category</p>
+                        <p className="text-sm font-medium text-slate-700">{college.category?.toUpperCase() || 'N/A'}</p>
+                      </div>
+                      <div className="bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full">
+                        <p className="text-[11px] md:text-xs text-slate-400 mb-1">Quota</p>
+                        <p className="text-sm font-medium text-slate-700">
+                          {college.quota === 'all_india' ? 'All India' : (college.quota || '').replace('_', ' ') || 'All India'}
+                        </p>
+                      </div>
+                      <div className="bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full">
+                        <p className="text-[11px] md:text-xs text-slate-400 mb-1">Closing Rank</p>
+                        <p className="text-sm font-medium text-slate-700">{college.rank?.toLocaleString() || 'N/A'}</p>
+                      </div>
+                      <div className="bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full">
+                        <p className="text-[11px] md:text-xs text-slate-400 mb-1">Course</p>
+                        <p className="text-sm font-medium text-slate-700">{(college.courseName || '').toUpperCase()}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-slate-400">Closing Rank</p>
-                      <p className="text-sm font-medium">{college.rank.toLocaleString()}</p>
+
+                    {/* Actions — desktop */}
+                    <div className="hidden md:flex flex-col items-center gap-2 ml-6">
+                      {getChanceBadge(college.chance)}
+                      <button
+                        onClick={() => setExpandedCollege(expandedCollege === college.id ? null : college.id)}
+                        className="flex items-center gap-1 rounded-[8px] cursor-pointer py-1 px-2 border-2 border-[#3B82F6]/80 text-xs text-indigo-600 hover:text-indigo-700"
+                      >
+                        <Image src="/fileIcon.svg" alt="fileIcon" width={20} height={20} />
+                        View Details
+                      </button>
                     </div>
-                    <div>
-                      <p className="text-xs text-slate-400">Course</p>
-                      <p className="text-sm font-medium">{college.courseName}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2 ml-6">
-                    <button
-                      onClick={() => setExpandedCollege(expandedCollege === college.id ? null : college.id)}
-                      className="flex items-center gap-1 text-sm text-indigo-600"
-                    >
-                      <ChevronDown className={`h-4 w-4 ${expandedCollege === college.id ? 'rotate-180' : ''}`} />
-                      Details
-                    </button>
                   </div>
                 </div>
+
+                {/* Expanded Details */}
+                {expandedCollege === college.id && (
+                  <div className="border-t border-slate-100 p-5 bg-slate-50">
+                    <div className="grid sm:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <p className="text-slate-500">Category</p>
+                        <p className="font-medium">{college.category?.toUpperCase() || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Chance</p>
+                        <p className="font-medium capitalize">{college.chance || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Closing Rank</p>
+                        <p className="font-medium">{college.rank?.toLocaleString() || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Quota</p>
+                        <p className="font-medium">
+                          {college.quota === 'all_india' ? 'All India' : (college.quota || '').replace('_', ' ') || 'All India'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl border border-slate-100 p-12 text-center text-slate-500">
-            <Building2 className="h-12 w-12 mx-auto mb-4 opacity-20" />
-            No colleges found matching your criteria.
+          <div className="bg-white rounded-xl border border-slate-100 p-12 text-center">
+            <Building2 className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500">No colleges found matching your criteria.</p>
+            <p className="text-slate-400 text-sm mt-1">Try switching tabs or removing the state filter.</p>
           </div>
         )}
 
-        <div className="mt-8 text-right">
-          <Link href="/student/previous-year" className="text-indigo-600 font-medium underline">
-             View Previous Year Reference
+        {/* Back Link */}
+        <div className="mt-8 flex items-center justify-between">
+          <button
+            onClick={() => router.push('/student/info')}
+            className="text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+          >
+            ← Back to My Info
+          </button>
+          <Link href="/student/previous-year" className="text-indigo-600 font-medium text-sm underline">
+            View Previous Year Reference
           </Link>
         </div>
       </main>
+
       <LogoutModal open={logoutOpen} onOpenChange={setLogoutOpen} />
     </div>
   );

@@ -110,10 +110,10 @@ export default function CollegePage() {
             <Upload className="h-4 w-4 mr-2" />
             Upload
           </Button>
-          <Button size="sm">
+          {/* <Button size="sm">
             <Edit className="h-4 w-4 mr-2" />
             Edit
-          </Button>
+          </Button> */}
         </div>
       }
     >

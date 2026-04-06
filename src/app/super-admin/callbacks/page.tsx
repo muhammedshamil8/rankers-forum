@@ -112,6 +112,8 @@ function SuperAdminCallbacksContent() {
   });
 
   // Assign lead mutation
+  const [assignError, setAssignError] = useState<string | null>(null);
+
   const assignMutation = useMutation({
     mutationFn: async ({ leadId, adminId }: { leadId: string; adminId: string }) => {
       const response = await fetch(`/api/admin/leads/${leadId}`, {
@@ -119,14 +121,19 @@ function SuperAdminCallbacksContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assignToAdminId: adminId }),
       });
-      if (!response.ok) throw new Error('Failed to assign lead');
-      return response.json();
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || 'Failed to assign lead');
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['super-admin-callbacks'] });
       setAssignModalOpen(false);
       setSelectedLead(null);
       setSelectedAdminId('');
+      setAssignError(null);
+    },
+    onError: (error: Error) => {
+      setAssignError(error.message || 'Assignment failed. Please try again.');
     },
   });
 
@@ -148,8 +155,8 @@ function SuperAdminCallbacksContent() {
   const admins: Admin[] = adminsData?.admins || [];
   
   const filteredLeads = leads.filter(lead =>
-    lead.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    lead.studentPhone.includes(searchQuery)
+    (lead.studentName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (lead.studentPhone || '').includes(searchQuery)
   );
 
   return (
@@ -286,10 +293,17 @@ function SuperAdminCallbacksContent() {
               </Select>
             </div>
 
+            {assignError && (
+              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-100">
+                {assignError}
+              </div>
+            )}
+
             <Button
               className="w-full"
               onClick={() => {
                 if (selectedLead && selectedAdminId) {
+                  setAssignError(null);
                   assignMutation.mutate({
                     leadId: selectedLead.id,
                     adminId: selectedAdminId,

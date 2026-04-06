@@ -246,8 +246,12 @@ export default function PreviousYearPage() {
 
                         <div className='flex items-center  h-full justify-between'>
                           {/* Details Grid */}
-                          <div className=" h-full  grid grid-cols-3 gap-1 md:gap-3 
+                          <div className=" h-full  grid grid-cols-4 gap-1 md:gap-3 
                           text-center">
+                            <div className='bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full'>
+                              <p className=" text-[11px] md:text-xs text-slate-400 mb-1">Category</p>
+                              <p className="text-sm font-medium text-slate-700">{college.category?.toUpperCase() || 'N/A'}</p>
+                            </div>
                             <div className='bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full'>
                               <p className=" text-[11px] md:text-xs text-slate-400 mb-1">Quota</p>
                               <p className="text-sm font-medium text-slate-700">{college.quota === 'all_india' ? 'All India' : (college.quota || '').replace('_', ' ')}</p>
