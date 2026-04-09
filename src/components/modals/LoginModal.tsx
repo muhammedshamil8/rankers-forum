@@ -41,6 +41,7 @@ export function LoginModal({
 }: LoginModalProps) {
   const router = useRouter();
   const { login, loginWithGoogle, loading, error, clearError } = useAuthActions();
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const {
@@ -56,15 +57,21 @@ export function LoginModal({
     try {
       clearError();
       const user = await login(data.email, data.password);
+      
+      if (!user) return;
+
+      setIsRedirecting(true);
       reset();
 
-      if (user?.role === 'admin') {
-        onOpenChange(false);
-        router.push('/admin/dashboard');
-      } else {
-        onOpenChange(false);
-        onSuccess?.();
-      }
+      // Delay a bit to let the user see the success state
+      setTimeout(() => {
+        if (user.role === 'admin' || user.role === 'super_admin') {
+          router.push('/super-admin/dashboard');
+        } else {
+          onOpenChange(false);
+          onSuccess?.();
+        }
+      }, 100);
     } catch {
       // Error is handled by useAuthActions
     }
@@ -76,13 +83,19 @@ export function LoginModal({
       clearError();
       const user = await loginWithGoogle();
 
-      if (user?.role === 'admin') {
-        onOpenChange(false);
-        router.push('/admin/dashboard');
-      } else {
-        onOpenChange(false);
-        onSuccess?.();
-      }
+      if (!user) return;
+
+      setIsRedirecting(true);
+
+      // Delay a bit for smoothness
+      setTimeout(() => {
+        if (user.role === 'admin' || user.role === 'super_admin') {
+          router.push('/super-admin/dashboard');
+        } else {
+          onOpenChange(false);
+          onSuccess?.();
+        }
+      }, 100);
     } catch {
       // Error is handled by useAuthActions
     } finally {
@@ -145,12 +158,17 @@ export function LoginModal({
             type="submit"
             className="w-full h-12 rounded-full"
             size="lg"
-            disabled={loading}
+            disabled={loading || isRedirecting}
           >
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing in...
+              </>
+            ) : isRedirecting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Redirecting...
               </>
             ) : (
               <>
@@ -175,9 +193,11 @@ export function LoginModal({
             className="w-full h-12 rounded-full"
             size="lg"
             onClick={handleGoogleLogin}
-            disabled={googleLoading}
+            disabled={googleLoading || isRedirecting}
           >
             {googleLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : isRedirecting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">

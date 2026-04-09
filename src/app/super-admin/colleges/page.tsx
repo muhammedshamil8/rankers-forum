@@ -86,21 +86,6 @@ export default function CollegePage() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedColleges = filteredColleges.slice(startIndex, endIndex);
 
-  // Reset to page 1 if current page is out of bounds
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1);
-    }
-  }, [currentPage, totalPages]);
-
-  if (authLoading || !isAuthorized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
-
   return (
     <AdminLayout
       title="College Details"
@@ -110,97 +95,101 @@ export default function CollegePage() {
             <Upload className="h-4 w-4 mr-2" />
             Upload
           </Button>
-          {/* <Button size="sm">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button> */}
         </div>
       }
     >
-      {/* Year Tabs and Search Bar */}
-      <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-        {/* Year Tabs */}
-        <div className="flex gap-4">
-          {AVAILABLE_YEARS.map((year) => (
-            <button
-              key={year}
-              onClick={() => handleYearChange(year)}
-              className={`text-sm font-medium pb-2 border-b-2 transition-colors ${
-                selectedYear === year
-                  ? 'text-slate-900 border-indigo-600'
-                  : 'text-slate-500 border-transparent hover:text-slate-700'
-              }`}
-            >
-              {year}
-            </button>
-          ))}
+      {(authLoading || !isAuthorized) ? (
+        <div className="min-h-[400px] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
         </div>
+      ) : (
+        <>
+          {/* Year Tabs and Search Bar */}
+          <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
+            {/* Year Tabs */}
+            <div className="flex gap-4">
+              {AVAILABLE_YEARS.map((year) => (
+                <button
+                  key={year}
+                  onClick={() => handleYearChange(year)}
+                  className={`text-sm font-medium pb-2 border-b-2 transition-colors ${
+                    selectedYear === year
+                      ? 'text-slate-900 border-indigo-600'
+                      : 'text-slate-500 border-transparent hover:text-slate-700'
+                  }`}
+                >
+                  {year}
+                </button>
+              ))}
+            </div>
 
-        {/* Search Bar */}
-        <div className="relative max-w-lg  w-full sm:w-auto">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            type="text"
-            placeholder="Search by college name,  course name, category, or location..."
-            value={searchQuery}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-10 pr-4 w-full"
-          />
-        </div>
-      </div>
+            {/* Search Bar */}
+            <div className="relative max-w-lg  w-full sm:w-auto">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Search by college name,  course name, category, or location..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-10 pr-4 w-full"
+              />
+            </div>
+          </div>
 
-      {/* Colleges Table */}
-      <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#2F129B] text-white text-sm rounded-t-2xl overflow-hidden">
-                <th className="text-left px-6 py-4 font-medium rounded-tl-2xl">College Name</th>
-                <th className="text-left px-6 py-4 font-medium">Category</th>
-                <th className="text-left px-6 py-4 font-medium">Rank</th>
-                <th className="text-left px-6 py-4 font-medium rounded-tr-2xl">Course Name</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {isLoading ? (
-                <TableShimmer rows={6} columns={4} hasActionsColumn={false} />
-              ) : filteredColleges.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-16">
-                    <div className="flex items-center justify-center min-h-96">
-                      <p className="text-slate-500 text-sm">
-                        {searchQuery 
-                          ? `No colleges found matching "${searchQuery}".` 
-                          : `No colleges found for ${selectedYear}.`}
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                paginatedColleges.map((college) => (
-                  <tr key={college.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 text-sm text-slate-900">{college.collegeName}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{college.category}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{college.rank}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600 uppercase">{college.courseName}</td>
+          {/* Colleges Table */}
+          <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-[#2F129B] text-white text-sm rounded-t-2xl overflow-hidden">
+                    <th className="text-left px-6 py-4 font-medium rounded-tl-2xl">College Name</th>
+                    <th className="text-left px-6 py-4 font-medium">Category</th>
+                    <th className="text-left px-6 py-4 font-medium">Rank</th>
+                    <th className="text-left px-6 py-4 font-medium rounded-tr-2xl">Course Name</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        
-        {/* Pagination */}
-        {!isLoading && filteredColleges.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            itemsPerPage={itemsPerPage}
-            totalItems={totalItems}
-          />
-        )}
-      </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {isLoading ? (
+                    <TableShimmer rows={6} columns={4} hasActionsColumn={false} />
+                  ) : filteredColleges.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-16">
+                        <div className="flex items-center justify-center min-h-96">
+                          <p className="text-slate-500 text-sm">
+                            {searchQuery 
+                              ? `No colleges found matching "${searchQuery}".` 
+                              : `No colleges found for ${selectedYear}.`}
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedColleges.map((college) => (
+                      <tr key={college.id} className="hover:bg-slate-50">
+                        <td className="px-6 py-4 text-sm text-slate-900">{college.collegeName}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{college.category}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{college.rank}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600 uppercase">{college.courseName}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Pagination */}
+            {!isLoading && filteredColleges.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                totalItems={totalItems}
+              />
+            )}
+          </div>
+        </>
+      )}
       
       {/* Upload Dialog */}
       <UploadDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen} />

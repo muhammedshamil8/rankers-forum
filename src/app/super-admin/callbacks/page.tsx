@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, Search, UserPlus, Phone, Check } from 'lucide-react';
-import { AdminSidebar } from '@/components/layout';
+import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -143,26 +143,22 @@ function SuperAdminCallbacksContent() {
     }
   }, [authLoading, isAuthorized, router]);
 
-  if (authLoading || !isAuthorized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
-
   const leads: Lead[] = leadsData?.leads || [];
   const admins: Admin[] = adminsData?.admins || [];
-  
+
   const filteredLeads = leads.filter(lead =>
     (lead.studentName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (lead.studentPhone || '').includes(searchQuery)
   );
 
   return (
-    <>
-    <AdminSidebar/>
-      <div className="space-y-6">
+    <AdminLayout title="Callback Requests">
+      {(authLoading || !isAuthorized) ? (
+        <div className="min-h-[400px] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        </div>
+      ) : (
+        <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Callback Requests</h1>
           <p className="text-slate-600">Assign callback requests to admins</p>
@@ -320,6 +316,6 @@ function SuperAdminCallbacksContent() {
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </AdminLayout>
   );
 }

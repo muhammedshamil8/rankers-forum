@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
 import { getUserById } from '@/lib/services/users';
-import { getLeads } from '@/lib/services/leads';
+import { getLeads, populateStudentInfo } from '@/lib/services/leads';
 import { LeadStatus } from '@/types';
 
 /**
@@ -68,7 +68,8 @@ export async function GET(request: NextRequest) {
       options.assignedAdminId = adminId;
     }
 
-    const leads = await getLeads(options);
+    const rawLeads = await getLeads(options);
+    const leads = await populateStudentInfo(rawLeads);
 
     return NextResponse.json({ leads });
   } catch (error) {

@@ -155,14 +155,6 @@ export default function AdminManagementPage() {
     setLeadsModalOpen(true);
   };
 
-  if (authLoading || !isAuthorized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
-
   const admins: Admin[] = adminsData?.admins || [];
 
   return (
@@ -177,83 +169,91 @@ export default function AdminManagementPage() {
         </div>
       }
     >
-      {/* Admins Table */}
-      <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#2F129B] text-white text-sm rounded-t-2xl overflow-hidden">
-                <th className="text-left px-6 py-4 font-medium rounded-tl-2xl">Admin Name</th>
-                <th className="text-left px-6 py-4 font-medium">Employee Number</th>
-                <th className="text-left px-6 py-4 font-medium">Phone no.</th>
-                <th className="text-left px-6 py-4 font-medium">Email Id</th>
-                <th className="text-left px-6 py-4 font-medium">Callback</th>
-                <th className="text-left px-6 py-4 font-medium">Active</th>
-                <th className="text-left px-6 py-4 font-medium rounded-tr-2xl">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {isLoading ? (
-                <TableShimmer rows={6} columns={7} />
-              ) : admins.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-16">
-                    <div className="flex items-center justify-center min-h-96">
-                      <p className="text-slate-500 text-sm">No admins found. Click "Create Admin" to add one.</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                admins.map((admin) => (
-                  <tr key={admin.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 text-sm text-slate-900">
-                      {admin.firstName} {admin.lastName}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {admin.profile?.employeeNumber || '-'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{admin.phone}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{admin.email}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {admin.profile?.currentActiveLeads || 0}
-                    </td>
-                    <td className="px-6 py-4">
-                      <button
-                        onClick={() => toggleActiveMutation.mutate({ adminId: admin.id, isActive: !admin.isActive })}
-                        disabled={toggleActiveMutation.isPending}
-                      >
-                        {admin.isActive ? (
-                          <Badge className="bg-green-50 text-green-700 border-green-200 cursor-pointer">Yes</Badge>
-                        ) : (
-                          <Badge className="bg-slate-100 text-slate-600 border-slate-200 cursor-pointer">No</Badge>
-                        )}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleViewDetails(admin)}
-                          className="text-indigo-600 hover:text-indigo-700"
-                          title="View Details"
-                        >
-                          <Image src="/details.svg" alt="Details" width={24} height={24} />
-                        </button>
-                        <button
-                          onClick={() => handleViewLeads(admin)}
-                          className="text-slate-500 hover:text-indigo-600"
-                          title="View Assigned Leads"
-                        >
-                          <Users className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {(authLoading || !isAuthorized) ? (
+        <div className="min-h-[400px] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Admins Table */}
+          <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-[#2F129B] text-white text-sm rounded-t-2xl overflow-hidden">
+                    <th className="text-left px-6 py-4 font-medium rounded-tl-2xl">Admin Name</th>
+                    <th className="text-left px-6 py-4 font-medium">Employee Number</th>
+                    <th className="text-left px-6 py-4 font-medium">Phone no.</th>
+                    <th className="text-left px-6 py-4 font-medium">Email Id</th>
+                    <th className="text-left px-6 py-4 font-medium">Callback</th>
+                    <th className="text-left px-6 py-4 font-medium">Active</th>
+                    <th className="text-left px-6 py-4 font-medium rounded-tr-2xl">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {isLoading ? (
+                    <TableShimmer rows={6} columns={7} />
+                  ) : admins.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-16">
+                        <div className="flex items-center justify-center min-h-96">
+                          <p className="text-slate-500 text-sm">No admins found. Click "Create Admin" to add one.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    admins.map((admin) => (
+                      <tr key={admin.id} className="hover:bg-slate-50">
+                        <td className="px-6 py-4 text-sm text-slate-900">
+                          {admin.firstName} {admin.lastName}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {admin.profile?.employeeNumber || '-'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{admin.phone}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{admin.email}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {admin.profile?.currentActiveLeads || 0}
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => toggleActiveMutation.mutate({ adminId: admin.id, isActive: !admin.isActive })}
+                            disabled={toggleActiveMutation.isPending}
+                          >
+                            {admin.isActive ? (
+                              <Badge className="bg-green-50 text-green-700 border-green-200 cursor-pointer">Yes</Badge>
+                            ) : (
+                              <Badge className="bg-slate-100 text-slate-600 border-slate-200 cursor-pointer">No</Badge>
+                            )}
+                          </button>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleViewDetails(admin)}
+                              className="text-indigo-600 hover:text-indigo-700"
+                              title="View Details"
+                            >
+                              <Image src="/details.svg" alt="Details" width={24} height={24} />
+                            </button>
+                            <button
+                              onClick={() => handleViewLeads(admin)}
+                              className="text-slate-500 hover:text-indigo-600"
+                              title="View Assigned Leads"
+                            >
+                              <Users className="h-5 w-5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Create Admin Modal */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>

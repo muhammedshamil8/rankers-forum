@@ -2,6 +2,7 @@ import dbConnect from '../mongodb';
 import { LeadModel, LeadFollowupModel } from '@/models/Lead';
 import { AdminProfileModel } from '@/models/AdminProfile';
 import { DashboardStatsModel } from '@/models/Stats';
+import { UserModel } from '@/models/User';
 import { Lead, CreateLeadInput, LeadStatus, LeadFollowup, CreateFollowupInput } from '@/types';
 
 /**
@@ -26,6 +27,15 @@ function mapLead(doc: any): Lead {
     assignedAt: data.assignedAt,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
+    // Optional populated user info
+    studentDetails: data.studentDetails ? {
+      firstName: data.studentDetails.firstName,
+      lastName: data.studentDetails.lastName,
+      email: data.studentDetails.email,
+      phone: data.studentDetails.phone,
+      city: data.studentDetails.city,
+      state: data.studentDetails.state,
+    } : undefined
   } as Lead;
 }
 
@@ -126,7 +136,39 @@ export async function getLeads(options: {
   }
   
   const docs = await dbQuery.exec();
-  return docs.map(mapLead);
+  const leads = docs.map(mapLead);
+
+  // If some leads are missing names, we could optionally populate them here
+  // But for now we return them as is, and the Admin UI can handle it or we use the lookup helper
+  return leads;
+}
+
+/**
+ * Populate student names and details for a list of leads using manual join
+ */
+export async function populateStudentInfo(leads: Lead[]): Promise<Lead[]> {
+  if (leads.length === 0) return [];
+  
+  await dbConnect();
+  
+  const studentIds = Array.from(new Set(leads.map(l => l.studentId)));
+  const users = await UserModel.find({ _id: { $in: studentIds } });
+  const userMap = new Map(users.map(u => [u._id.toString(), u]));
+  
+  return leads.map(lead => {
+    const user = userMap.get(lead.studentId);
+    if (!user) return lead;
+    
+    // If denormalized name is missing, use user name
+    if (!lead.studentName) {
+      lead.studentName = `${user.firstName} ${user.lastName}`.trim() || user.email.split('@')[0];
+    }
+    if (!lead.studentPhone) lead.studentPhone = user.phone || '';
+    if (!lead.studentEmail) lead.studentEmail = user.email || '';
+    if (!lead.studentLocation) lead.studentLocation = `${user.city}, ${user.state}`.replace(/^, |, $/g, '');
+    
+    return lead;
+  });
 }
 
 /**

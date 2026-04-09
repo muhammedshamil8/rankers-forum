@@ -48,14 +48,6 @@ export default function ProfilePage() {
     }
   }, [authLoading, isAuthorized, router]);
 
-  if (authLoading || !isAuthorized || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
-
   // Combine user and admin profile data
   const profile: AdminProfile = {
     ...profileData?.user,
@@ -71,115 +63,123 @@ export default function ProfilePage() {
 
   return (
     <AdminLayout title="My Profile">
-      {/* Profile Header */}
-      <div className="bg-white flex items-center justify-center rounded-xl border border-slate-100 p-8 mb-2">
-        <div className="flex items-center gap-6">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-3xl font-bold text-slate-600">
-            {user?.firstName?.[0]}{user?.lastName?.[0]}
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900">
-              {user?.firstName} {user?.lastName}
-            </h2>
-            <p className="text-slate-500">
-              {user?.role === 'super_admin' ? 'Super Admin' : 'Admin'}
-            </p>
-            <p className="text-slate-500">{profile.city}, {profile.state}</p>
-          </div>
+      {(authLoading || !isAuthorized || isLoading) ? (
+        <div className="min-h-[400px] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Profile Header */}
+          <div className="bg-white flex items-center justify-center rounded-xl border border-slate-100 p-8 mb-2">
+            <div className="flex items-center gap-6">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-3xl font-bold text-slate-600">
+                {user?.firstName?.[0]}{user?.lastName?.[0]}
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  {user?.firstName} {user?.lastName}
+                </h2>
+                <p className="text-slate-500">
+                  {user?.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                </p>
+                <p className="text-slate-500">{profile.city || '-'}, {profile.state || '-'}</p>
+              </div>
+            </div>
+          </div>
 
-      {/* Personal Details */}
-      <div className="bg-white rounded-xl border border-slate-100 p-8 mb-2">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-base font-medium text-indigo-700">Personal Details</h3>
-          <Button variant="ghost" size="sm">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-        </div>
+          {/* Personal Details */}
+          <div className="bg-white rounded-xl border border-slate-100 p-8 mb-2">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base font-medium text-indigo-700">Personal Details</h3>
+              <Button variant="ghost" size="sm" disabled>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          <div>
-            <p className="text-sm text-slate-500">First Name</p>
-            <p className="font-medium text-sm text-slate-900">{user?.firstName || '-'}</p>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div>
+                <p className="text-sm text-slate-500">First Name</p>
+                <p className="font-medium text-sm text-slate-900">{user?.firstName || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Last Name</p>
+                <p className="font-medium text-sm text-slate-900">{user?.lastName || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Gender</p>
+                <p className="font-medium text-sm text-slate-900 capitalize">{profile.gender || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Date of Birth</p>
+                <p className="font-medium text-sm text-slate-900">{profile.dateOfBirth || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Location</p>
+                <p className="font-medium text-sm text-slate-900">
+                  {profile.city && profile.state ? `${profile.city}, ${profile.state}` : '-'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Mobile Number</p>
+                <p className="font-medium text-sm text-slate-900">{profile.phone ? `+91 ${profile.phone}` : '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Personal Email</p>
+                <p className="font-medium text-sm text-slate-900">{user?.email || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Marital Status</p>
+                <p className="font-medium text-sm text-slate-900 capitalize">{profile.maritalStatus || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Blood Group</p>
+                <p className="font-medium text-sm text-slate-900">{profile.bloodGroup || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Nationality</p>
+                <p className="font-medium text-sm text-slate-900">{profile.nationality || 'India'}</p>
+              </div>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-slate-500">Last Name</p>
-            <p className="font-medium text-sm text-slate-900">{user?.lastName || '-'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">Gender</p>
-            <p className="font-medium text-sm text-slate-900 capitalize">{profile.gender || '-'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">Date of Birth</p>
-            <p className="font-medium text-sm text-slate-900">{profile.dateOfBirth || '-'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">Location</p>
-            <p className="font-medium text-sm text-slate-900">
-              {profile.city && profile.state ? `${profile.city}, ${profile.state}` : '-'}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">Mobile Number</p>
-            <p className="font-medium text-sm text-slate-900">{profile.phone ? `+91 ${profile.phone}` : '-'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">Personal Email</p>
-            <p className="font-medium text-sm text-slate-900">{user?.email || '-'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">Marital Status</p>
-            <p className="font-medium text-sm text-slate-900 capitalize">{profile.maritalStatus || '-'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">Blood Group</p>
-            <p className="font-medium text-sm text-slate-900">{profile.bloodGroup || '-'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">Nationality</p>
-            <p className="font-medium text-sm text-slate-900">{profile.nationality || 'India'}</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Job Details */}
-      <div className="bg-white rounded-xl border border-slate-100 p-8">
-        <h3 className=" font-medium text-indigo-700 mb-2">Job Details</h3>
+          {/* Job Details */}
+          <div className="bg-white rounded-xl border border-slate-100 p-8">
+            <h3 className=" font-medium text-indigo-700 mb-2">Job Details</h3>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          <div>
-            <p className="text-sm text-slate-500">Employee Number</p>
-            <p className="font-medium text-sm text-slate-900">{profile.employeeNumber || '-'}</p>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div>
+                <p className="text-sm text-slate-500">Employee Number</p>
+                <p className="font-medium text-sm text-slate-900">{profile.employeeNumber || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Date of Joining</p>
+                <p className="font-medium text-sm text-slate-900">{profile.dateOfJoining || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Job Title</p>
+                <p className="font-medium   text-sm text-slate-900">
+                  {profile.jobTitle || (user?.role === 'super_admin' ? 'Super Admin' : 'Admin')}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Work Email</p>
+                <p className="font-medium text-sm text-slate-900">{user?.email || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Job Type</p>
+                <p className="font-medium text-sm text-slate-900 capitalize">
+                  {profile.jobType?.replace('_', ' ') || 'Full Time'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Notice Period</p>
+                <p className="font-medium text-sm text-slate-900">{profile.noticePeriod || '1 Month'}</p>
+              </div>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-slate-500">Date of Joining</p>
-            <p className="font-medium text-sm text-slate-900">{profile.dateOfJoining || '-'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">Job Title</p>
-            <p className="font-medium   text-sm text-slate-900">
-              {profile.jobTitle || (user?.role === 'super_admin' ? 'Super Admin' : 'Admin')}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">Work Email</p>
-            <p className="font-medium text-sm text-slate-900">{user?.email || '-'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">Job Type</p>
-            <p className="font-medium text-sm text-slate-900 capitalize">
-              {profile.jobType?.replace('_', ' ') || 'Full Time'}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">Notice Period</p>
-            <p className="font-medium text-sm text-slate-900">{profile.noticePeriod || '1 Month'}</p>
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </AdminLayout>
   );
 }

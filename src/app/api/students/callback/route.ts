@@ -102,13 +102,37 @@ export async function POST(request: NextRequest) {
       }, { status: 409 });
     }
 
+    // Extract student info with robust fallbacks
+    // User might have logged in with Google and not filled profile name
+    const firstName = user?.firstName || '';
+    const lastName = user?.lastName || '';
+    let studentName = `${firstName} ${lastName}`.trim();
+
+    // Fallback to email prefix if name is truly missing
+    if (!studentName) {
+      studentName = user?.email?.split('@')[0] || 'Student';
+    }
+
+    const studentPhone = user?.phone || '';
+    const studentEmail = user?.email || '';
+    
+    // Logic for location: User city/state or Student domicile
+    let studentLocation = '';
+    if (user?.city && user?.state) {
+      studentLocation = `${user.city}, ${user.state}`;
+    } else if (user?.state) {
+      studentLocation = user.state;
+    } else if (student.domicileState) {
+      studentLocation = student.domicileState;
+    }
+
     // Create a new lead with callback requested
     const lead = await createLead({
       studentId: uid,
-      studentName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
-      studentPhone: user?.phone || '',
-      studentEmail: user?.email || '',
-      studentLocation: `${user?.city || ''}, ${user?.state || ''}`.replace(/^, |, $/g, ''),
+      studentName,
+      studentPhone,
+      studentEmail,
+      studentLocation,
       rankUsed: student.rank || 0,
       preferredBranch: student.preferredBranch || '',
       year: student.yearOfPassing || new Date().getFullYear(),

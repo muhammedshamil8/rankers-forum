@@ -230,14 +230,6 @@ export default function StudentsPage() {
     }
   }, [currentPage, studentsTotalPages, leadsTotalPages, activeTab]);
 
-  if (authLoading || !isAuthorized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
-
   const handleViewDetails = (student: Student) => {
     setSelectedStudent(student);
     setDetailsModalOpen(true);
@@ -252,8 +244,6 @@ export default function StudentsPage() {
     if (!student.hasCallback) return;
 
     // Construct a Lead object from Student data
-    // Note: Assuming student.leadId is available from the API.
-    // If not, we might need to fallback to something else or the mutation might fail.
     const lead: Lead = {
       id: student.leadId || '',
       studentId: student.id,
@@ -296,44 +286,52 @@ export default function StudentsPage() {
         </div>
       }
     >
-      {/* Tabs and Search Bar */}
-      <div className="flex items-center justify-between gap-4 mb-6 flex-wrap print:hidden">
-        {/* Tabs */}
-        <div className="flex gap-4">
-          <button
-            onClick={() => handleTabChange('details')}
-            className={`text-sm font-medium pb-2 border-b-2 transition-colors ${activeTab === 'details'
-              ? 'text-slate-900 border-indigo-600'
-              : 'text-slate-500 border-transparent hover:text-slate-700'
-              }`}
-          >
-            Students Details
-          </button>
-          <button
-            onClick={() => handleTabChange('callback')}
-            className={`text-sm font-medium pb-2 border-b-2 transition-colors ${activeTab === 'callback'
-              ? 'text-slate-900 border-indigo-600'
-              : 'text-slate-500 border-transparent hover:text-slate-700'
-              }`}
-          >
-            Callback Request
-          </button>
+      {(authLoading || !isAuthorized) ? (
+        <div className="min-h-[400px] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
         </div>
+      ) : (
+        <>
+          {/* Tabs and Search Bar */}
+          <div className="flex items-center justify-between gap-4 mb-6 flex-wrap print:hidden">
+            {/* Tabs */}
+            <div className="flex gap-4">
+              <button
+                onClick={() => handleTabChange('details')}
+                className={`text-sm font-medium pb-2 border-b-2 transition-colors ${activeTab === 'details'
+                  ? 'text-slate-900 border-indigo-600'
+                  : 'text-slate-500 border-transparent hover:text-slate-700'
+                  }`}
+              >
+                Students Details
+              </button>
+              <button
+                onClick={() => handleTabChange('callback')}
+                className={`text-sm font-medium pb-2 border-b-2 transition-colors ${activeTab === 'callback'
+                  ? 'text-slate-900 border-indigo-600'
+                  : 'text-slate-500 border-transparent hover:text-slate-700'
+                  }`}
+              >
+                Callback Request
+              </button>
+            </div>
 
-        {/* Search Bar */}
-        <div className="relative max-w-lg w-full sm:w-auto">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            type="text"
-            placeholder={activeTab === 'details'
-              ? "Search by name, email, phone, location, or rank..."
-              : "Search by name, phone, state, course, or rank..."}
-            value={searchQuery}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSearchChange(e.target.value)}
-            className="pl-10 pr-4 w-full"
-          />
-        </div>
-      </div>
+            {/* Search Bar */}
+            <div className="relative max-w-lg w-full sm:w-auto">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                type="text"
+                placeholder={activeTab === 'details'
+                  ? "Search by name, email, phone, location, or rank..."
+                  : "Search by name, phone, state, course, or rank..."}
+                value={searchQuery}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSearchChange(e.target.value)}
+                className="pl-10 pr-4 w-full"
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Print Only Title */}
       <div className="hidden print:block mb-8">

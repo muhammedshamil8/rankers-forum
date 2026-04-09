@@ -86,14 +86,6 @@ export default function SuperAdminDashboard() {
     },
   });
 
-  if (authLoading || !isAuthorized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
-      </div>
-    );
-  }
-
   const stats: DashboardStats = statsData?.stats || {
     totalRegistrations: 0,
     totalInfoFilled: 0,
@@ -109,8 +101,6 @@ export default function SuperAdminDashboard() {
     { label: 'Total Requests', value: stats.totalRequests, icon: "/user.svg", color: 'bg-amber-50 text-amber-600' },
     { label: 'Pending Callbacks', value: stats.pendingCallbacks, icon: "/phone.svg", color: 'bg-purple-50 text-purple-600' },
   ];
-
-
 
   const getStatusBadge = (status: string, leadId: string) => {
     const statusMap: Record<string, { label: string, color: string }> = {
@@ -146,78 +136,86 @@ export default function SuperAdminDashboard() {
 
   return (
     <AdminLayout title="Dashboard">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-        {statCards.map((stat, index) => (
-          <div key={index} className="bg-white rounded-xl p-6 border border-slate-100">
-            <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl ${stat.color} flex items-center justify-center`}>
-                <Image src={stat.icon as string} alt={stat.label} width={28} height={28} />
+      {(authLoading || !isAuthorized) ? (
+        <div className="min-h-[400px] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        </div>
+      ) : (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+            {statCards.map((stat, index) => (
+              <div key={index} className="bg-white rounded-xl p-6 border border-slate-100">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl ${stat.color} flex items-center justify-center`}>
+                    <Image src={stat.icon as string} alt={stat.label} width={28} height={28} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">{stat.label}</p>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {statsLoading ? '...' : (statsData?.stats?.[stat.label.toLowerCase().replace(/ /g, '') as keyof DashboardStats] || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-slate-500">{stat.label}</p>
-                <p className="text-2xl font-bold text-slate-900">
-                  {statsLoading ? '...' : stat.value.toLocaleString()}
-                </p>
-              </div>
+            ))}
+          </div>
+
+          {/* Assigned Callbacks Table */}
+          <div className=" rounded-xl  border-slate-100 overflow-hidden">
+            <div className="py-3 border-b border-slate-100">
+              <h2 className="text-lg font-medium text-slate-900">Assigned Callbacks</h2>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-[#2F129B] text-white text-sm rounded-t-2xl overflow-hidden">
+                    <th className="text-left px-6 py-4 font-medium rounded-tl-2xl ">Name</th>
+                    <th className="text-left px-6 py-4 font-medium">State</th>
+                    <th className="text-left px-6 py-4 font-medium">Phone no.</th>
+                    <th className="text-left px-6 py-4 font-medium">Rank</th>
+                    <th className="text-left px-6 py-4 font-medium">Course</th>
+                    <th className="text-left px-6 py-4 font-medium">Assigned on</th>
+                    <th className="text-left px-6 py-4 font-medium rounded-tr-2xl">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {leadsLoading ? (
+                    <TableShimmer rows={6} columns={7} />
+                  ) : leads.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-16 ">
+                        <div className="flex items-center justify-center min-h-96">
+                          <p className="text-slate-500 text-sm">No assigned callbacks yet.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    leads.map((lead) => (
+                      <tr key={lead.id} className="hover:bg-slate-50">
+                        <td className="px-6 py-4 text-sm text-slate-900">{lead.studentName || 'N/A'}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{lead.studentLocation || 'N/A'}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{lead.studentPhone || 'N/A'}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{lead.rankUsed}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{lead.preferredBranch}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">
+                          {lead.createdAt ? new Date(lead.createdAt._seconds * 1000).toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric'
+                          }) : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4">{getStatusBadge(lead.status, lead.id)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        ))}
-      </div>
-
-      {/* Assigned Callbacks Table */}
-      <div className=" rounded-xl  border-slate-100 overflow-hidden">
-        <div className="py-3 border-b border-slate-100">
-          <h2 className="text-lg font-medium text-slate-900">Assigned Callbacks</h2>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#2F129B] text-white text-sm rounded-t-2xl overflow-hidden">
-                <th className="text-left px-6 py-4 font-medium rounded-tl-2xl ">Name</th>
-                <th className="text-left px-6 py-4 font-medium">State</th>
-                <th className="text-left px-6 py-4 font-medium">Phone no.</th>
-                <th className="text-left px-6 py-4 font-medium">Rank</th>
-                <th className="text-left px-6 py-4 font-medium">Course</th>
-                <th className="text-left px-6 py-4 font-medium">Assigned on</th>
-                <th className="text-left px-6 py-4 font-medium rounded-tr-2xl">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {leadsLoading ? (
-                <TableShimmer rows={6} columns={7} />
-              ) : leads.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-16 ">
-                    <div className="flex items-center justify-center min-h-96">
-                      <p className="text-slate-500 text-sm">No assigned callbacks yet.</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                leads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 text-sm text-slate-900">{lead.studentName}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{lead.studentLocation}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{lead.studentPhone}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{lead.rankUsed}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{lead.preferredBranch}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">
-                      {lead.createdAt ? new Date(lead.createdAt._seconds * 1000).toLocaleDateString('en-IN', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric'
-                      }) : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4">{getStatusBadge(lead.status, lead.id)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        </>
+      )}
     </AdminLayout>
   );
 }
