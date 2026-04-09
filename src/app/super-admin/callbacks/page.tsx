@@ -253,6 +253,7 @@ function SuperAdminCallbacksContent() {
           </Card>
         )}
       </div>
+      )}
 
       {/* Assign Modal */}
       <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
