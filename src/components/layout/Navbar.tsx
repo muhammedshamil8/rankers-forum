@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Phone, ArrowRight, LogOut } from 'lucide-react';
+import { Phone, ArrowRight, LogOut, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CallbackModal } from '@/components/modals';
 import { useAuthActions } from '@/lib/hooks/useAuthActions';
+import { UserMenu } from './UserMenu';
+import { useQuery } from '@tanstack/react-query';
 
 interface NavbarProps {
     user: any;
@@ -20,6 +22,19 @@ export function Navbar({ user, loading, onLoginClick, onRegisterClick }: NavbarP
     const router = useRouter();
     const { logout } = useAuthActions();
     const [callbackModalOpen, setCallbackModalOpen] = useState(false);
+
+    // Check existing callback status to disable button if already requested
+    const { data: callbackStatus } = useQuery({
+        queryKey: ['callback-status'],
+        queryFn: async () => {
+            const response = await fetch('/api/students/callback');
+            if (!response.ok) return null;
+            return response.json();
+        },
+        enabled: !!user && user.role === 'student',
+    });
+
+    const isCallbackPending = callbackStatus?.pendingCallback;
 
     const handlePhoneClick = () => {
         // For logged-in students, show callback modal
@@ -50,12 +65,27 @@ export function Navbar({ user, loading, onLoginClick, onRegisterClick }: NavbarP
                         <div className="flex items-center md:gap-4 gap-2">
                             {/* Phone button - opens modal for students, direct call for others */}
                             {user && user.role === 'student' ? (
-                                <button
-                                    onClick={handlePhoneClick}
-                                    className="md:w-11 md:h-11 w-9 h-9 rounded-full bg-linear-to-br from-[#2F129B] to-[#3B82F6] flex items-center justify-center text-white shadow-md hover:opacity-90 transition-all active:scale-95"
-                                >
-                                    <Phone className="md:w-5 md:h-5 w-3 h-3 fill-white" />
-                                </button>
+                                <div className="relative">
+                                    {/* Ripple animation for attention */}
+                                    {!isCallbackPending && (
+                                        <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20"></span>
+                                    )}
+                                    <button
+                                        onClick={handlePhoneClick}
+                                        disabled={isCallbackPending}
+                                        className={`relative md:w-11 md:h-11 w-9 h-9 rounded-full flex items-center justify-center text-white shadow-md transition-all active:scale-95 ${
+                                            isCallbackPending 
+                                            ? 'bg-slate-200 cursor-not-allowed text-slate-400 shadow-none' 
+                                            : 'bg-linear-to-br from-[#2F129B] to-[#3B82F6] hover:opacity-90 hover:scale-105'
+                                        }`}
+                                    >
+                                        {isCallbackPending ? (
+                                            <CheckCircle2 className="md:w-5 md:h-5 w-3 h-3" />
+                                        ) : (
+                                            <Phone className="md:w-5 md:h-5 w-3 h-3 fill-white" />
+                                        )}
+                                    </button>
+                                </div>
                             ) : (
                                 <a
                                     href="tel:+919876543210"
@@ -66,12 +96,7 @@ export function Navbar({ user, loading, onLoginClick, onRegisterClick }: NavbarP
                             )}
 
                             {loading ? null : user ? (
-                                <Button
-                                    onClick={() => logout()}
-                                    className="rounded-full bg-linear-to-br from-[#2F129B] to-[#3B82F6] text-white px-8 py-6 text-lg font-medium hover:opacity-90 shadow-lg transition-all active:scale-95 flex items-center gap-2 border-0"
-                                >
-                                    Logout <LogOut className="w-5 h-5" />
-                                </Button>
+                                <UserMenu user={user} />
                             ) : (
                                 <Button
                                     onClick={onLoginClick}

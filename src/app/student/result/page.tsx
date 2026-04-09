@@ -287,13 +287,13 @@ export default function StudentResultPage() {
                     {/* Actions — desktop */}
                     <div className="hidden md:flex flex-col items-center gap-2 ml-6">
                       {getChanceBadge(college.chance)}
-                      <button
+                      {/* <button
                         onClick={() => setExpandedCollege(expandedCollege === college.id ? null : college.id)}
                         className="flex items-center gap-1 rounded-[8px] cursor-pointer py-1 px-2 border-2 border-[#3B82F6]/80 text-xs text-indigo-600 hover:text-indigo-700"
                       >
                         <Image src="/fileIcon.svg" alt="fileIcon" width={20} height={20} />
                         View Details
-                      </button>
+                      </button> */}
                     </div>
                   </div>
                 </div>

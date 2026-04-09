@@ -338,7 +338,7 @@ export function RegisterModal({
 
             <p className="text-center text-sm text-slate-500">
               By registering you accept our{' '}
-              <a href="#" className="text-indigo-600 hover:underline">
+              <a href="/terms" className="text-indigo-600 hover:underline">
                 Terms & Conditions
               </a>
               .

@@ -109,7 +109,7 @@ export function CallbackModal({
             <DialogDescription className="text-slate-600 mb-6">
               Our team will contact you shortly. Thank you for your interest!
             </DialogDescription>
-            <Button onClick={handleClose} className="w-full">
+            <Button onClick={handleClose} className="w-full bg-linear-to-br from-[#2F129B] to-[#3B82F6] hover:opacity-90">
               Close
             </Button>
           </div>
@@ -190,25 +190,25 @@ export function CallbackModal({
   // Show callback request form
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md [&>button]:hidden">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
               <Phone className="h-5 w-5 text-indigo-600" />
             </div>
             <DialogTitle className="text-lg font-semibold">
-              Request a Callback
+              Talk to a College Expert
             </DialogTitle>
           </div>
           <DialogDescription className="text-slate-600">
-            Need help with your college selection? Our counsellors can guide you through the process.
+            {/* Get answers about your college selection and personalized guidance based on your profile */}
           </DialogDescription>
         </DialogHeader>
 
         <div className="mt-4 space-y-4">
           <div className="bg-slate-50 rounded-lg p-4">
             <p className="text-sm text-slate-600">
-              We found your student profile. Would you like our team to call you back with personalized guidance?
+             Get answers about your college selection and personalized guidance based on your profile
             </p>
           </div>
 
@@ -239,18 +239,16 @@ export function CallbackModal({
           </Button>
           <Button 
             onClick={handleSubmit} 
-            className="flex-1"
-            disabled={submitMutation.isPending}
+            className="flex-1 bg-linear-to-br from-[#2F129B] to-[#3B82F6] hover:opacity-90"
+            disabled={submitMutation.isPending || !requestCallback}
           >
             {submitMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Submitting...
               </>
-            ) : requestCallback ? (
-              'Request Callback'
             ) : (
-              'Close'
+              'Request Callback'
             )}
           </Button>
         </div>
