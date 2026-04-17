@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { useAuthActions } from '@/lib/hooks';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  identifier: z.string().min(1, 'Please enter your phone number or email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
@@ -49,6 +49,7 @@ export function LoginModal({
     handleSubmit,
     formState: { errors },
     reset,
+    setError: setFormError,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
@@ -56,7 +57,26 @@ export function LoginModal({
   const onSubmit = async (data: LoginFormData) => {
     try {
       clearError();
-      const user = await login(data.email, data.password);
+      
+      let email = data.identifier;
+      
+      // If the identifier doesn't look like an email, try looking it up as a phone number
+      if (!email.includes('@')) {
+        try {
+          const response = await fetch(`/api/auth/lookup?identifier=${encodeURIComponent(data.identifier)}`);
+          if (!response.ok) {
+            setFormError('identifier', { message: 'No account found with this phone number' });
+            return;
+          }
+          const { email: resolvedEmail } = await response.json();
+          email = resolvedEmail;
+        } catch (err) {
+          setFormError('identifier', { message: 'Failed to verify account' });
+          return;
+        }
+      }
+
+      const user = await login(email, data.password);
       
       if (!user) return;
 
@@ -118,16 +138,16 @@ export function LoginModal({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="email">Phone / Email id</Label>
+            <Label htmlFor="identifier">Phone / Email id</Label>
             <Input
-              id="email"
-              type="email"
-              placeholder="Enter Your Phone Number or Email Adreess"
+              id="identifier"
+              type="text"
+              placeholder="Enter Your Phone Number or Email Address"
               className="h-12"
-              {...register('email')}
+              {...register('identifier')}
             />
-            {errors.email && (
-              <p className="text-sm text-red-500">{errors.email.message}</p>
+            {errors.identifier && (
+              <p className="text-sm text-red-500">{errors.identifier.message}</p>
             )}
           </div>
 

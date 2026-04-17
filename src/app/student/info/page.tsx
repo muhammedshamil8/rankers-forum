@@ -23,6 +23,7 @@ import {
   QUOTA_TYPES,
   INDIAN_STATES,
   GENDERS,
+  COUNSELLING_TYPES,
 } from '@/lib/constants';
 import { LogoutModal } from '@/components/modals';
 
@@ -48,7 +49,7 @@ const studentInfoSchema = Yup.object({
 
 export default function StudentInfoPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const { isAuthorized } = useRequireAuth(['student']);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
@@ -133,12 +134,20 @@ export default function StudentInfoPage() {
 
       return collegesResponse.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // Refresh user session to update hasStudentProfile flag
+      await refreshUser();
+
       // Store result in sessionStorage and redirect
       sessionStorage.setItem('collegeResult', JSON.stringify(data));
       router.push('/student/result');
     },
   });
+
+  // Helper to get labels for values
+  const getCategoryLabel = (value: string) => NEET_CATEGORIES.find(c => c.value === value)?.label || value;
+  const getGenderLabel = (value: string) => GENDERS.find(g => g.value === value)?.label || value;
+  const getCounsellingLabel = (value: string) => COUNSELLING_TYPES.find(c => c.value === value)?.label || value;
 
   // Formik setup
   const formik = useFormik({
@@ -241,14 +250,11 @@ export default function StudentInfoPage() {
                 <Label htmlFor="rank">Rank <span className="text-red-500">*</span></Label>
                 <Input
                   id="rank"
-                  name="rank"
-                  type="number"
+                  type="text"
                   placeholder="Enter Your Rank"
-                  className={`h-12 ${formik.touched.rank && formik.errors.rank ? 'border-red-500 focus-visible:ring-red-500' : ''} ${profileIsComplete ? 'bg-slate-50 cursor-not-allowed opacity-70' : ''}`}
-                  value={formik.values.rank}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  disabled={profileIsComplete}
+                  className={`h-12 ${formik.touched.rank && formik.errors.rank ? 'border-red-500 focus-visible:ring-red-500' : ''} ${profileIsComplete ? 'bg-slate-50 cursor-not-allowed opacity-100 font-medium' : ''}`}
+                  {...formik.getFieldProps('rank')}
+                  readOnly={profileIsComplete}
                 />
                 {formik.touched.rank && formik.errors.rank && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
@@ -282,22 +288,29 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['year'] = el; }}
               >
                 <Label>Year <span className="text-red-500">*</span></Label>
-                <Select
-                  value={formik.values.year}
-                  onValueChange={(value) => formik.setFieldValue('year', value)}
-                  disabled={profileIsComplete}
-                >
-                  <SelectTrigger className={`h-12 ${formik.touched.year && formik.errors.year ? 'border-red-500' : ''}`}>
-                    <SelectValue placeholder="Select Year of Passout" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {years.map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {profileIsComplete ? (
+                  <Input
+                    value={formik.values.year}
+                    readOnly
+                    className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
+                  />
+                ) : (
+                  <Select
+                    value={formik.values.year}
+                    onValueChange={(value) => formik.setFieldValue('year', value)}
+                  >
+                    <SelectTrigger className={`h-12 ${formik.touched.year && formik.errors.year ? 'border-red-500' : ''}`}>
+                      <SelectValue placeholder="Select Year of Passout" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {years.map((year) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 {formik.touched.year && formik.errors.year && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
@@ -312,22 +325,29 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['domicileState'] = el; }}
               >
                 <Label>Domicile State <span className="text-red-500">*</span></Label>
-                <Select
-                  value={formik.values.domicileState}
-                  onValueChange={(value) => formik.setFieldValue('domicileState', value)}
-                  disabled={profileIsComplete}
-                >
-                  <SelectTrigger className={`h-12 ${formik.touched.domicileState && formik.errors.domicileState ? 'border-red-500' : ''}`}>
-                    <SelectValue placeholder="Select Your Domicile State" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INDIAN_STATES.map((state) => (
-                      <SelectItem key={state} value={state}>
-                        {state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {profileIsComplete ? (
+                  <Input
+                    value={formik.values.domicileState}
+                    readOnly
+                    className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
+                  />
+                ) : (
+                  <Select
+                    value={formik.values.domicileState}
+                    onValueChange={(value) => formik.setFieldValue('domicileState', value)}
+                  >
+                    <SelectTrigger className={`h-12 ${formik.touched.domicileState && formik.errors.domicileState ? 'border-red-500' : ''}`}>
+                      <SelectValue placeholder="Select Your Domicile State" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INDIAN_STATES.map((state) => (
+                        <SelectItem key={state} value={state}>
+                          {state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 {formik.touched.domicileState && formik.errors.domicileState && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
@@ -342,22 +362,29 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['category'] = el; }}
               >
                 <Label>Category <span className="text-red-500">*</span></Label>
-                <Select
-                  value={formik.values.category}
-                  onValueChange={(value) => formik.setFieldValue('category', value)}
-                  disabled={profileIsComplete}
-                >
-                  <SelectTrigger className={`h-12 ${formik.touched.category && formik.errors.category ? 'border-red-500' : ''}`}>
-                    <SelectValue placeholder="Select Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {NEET_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {profileIsComplete ? (
+                  <Input
+                    value={getCategoryLabel(formik.values.category)}
+                    readOnly
+                    className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
+                  />
+                ) : (
+                  <Select
+                    value={formik.values.category}
+                    onValueChange={(value) => formik.setFieldValue('category', value)}
+                  >
+                    <SelectTrigger className={`h-12 ${formik.touched.category && formik.errors.category ? 'border-red-500' : ''}`}>
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NEET_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 {formik.touched.category && formik.errors.category && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
@@ -372,22 +399,29 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['gender'] = el; }}
               >
                 <Label>Gender <span className="text-red-500">*</span></Label>
-                <Select
-                  value={formik.values.gender}
-                  onValueChange={(value) => formik.setFieldValue('gender', value)}
-                  disabled={profileIsComplete}
-                >
-                  <SelectTrigger className={`h-12 ${formik.touched.gender && formik.errors.gender ? 'border-red-500' : ''}`}>
-                    <SelectValue placeholder="Select Gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {GENDERS.map((gender) => (
-                      <SelectItem key={gender.value} value={gender.value}>
-                        {gender.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {profileIsComplete ? (
+                  <Input
+                    value={getGenderLabel(formik.values.gender)}
+                    readOnly
+                    className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
+                  />
+                ) : (
+                  <Select
+                    value={formik.values.gender}
+                    onValueChange={(value) => formik.setFieldValue('gender', value)}
+                  >
+                    <SelectTrigger className={`h-12 ${formik.touched.gender && formik.errors.gender ? 'border-red-500' : ''}`}>
+                      <SelectValue placeholder="Select Gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {GENDERS.map((gender) => (
+                        <SelectItem key={gender.value} value={gender.value}>
+                          {gender.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 {formik.touched.gender && formik.errors.gender && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
@@ -409,22 +443,29 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['counsellingType'] = el; }}
               >
                 <Label>Counselling Type <span className="text-red-500">*</span></Label>
-                <Select
-                  value={formik.values.counsellingType}
-                  onValueChange={(value) => formik.setFieldValue('counsellingType', value)}
-                  disabled={profileIsComplete}
-                >
-                  <SelectTrigger className={`h-12 ${formik.touched.counsellingType && formik.errors.counsellingType ? 'border-red-500' : ''}`}>
-                    <SelectValue placeholder="Select Counselling Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {QUOTA_TYPES.map((quota) => (
-                      <SelectItem key={quota.value} value={quota.value}>
-                        {quota.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {profileIsComplete ? (
+                  <Input
+                    value={getCounsellingLabel(formik.values.counsellingType)}
+                    readOnly
+                    className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
+                  />
+                ) : (
+                  <Select
+                    value={formik.values.counsellingType}
+                    onValueChange={(value) => formik.setFieldValue('counsellingType', value)}
+                  >
+                    <SelectTrigger className={`h-12 ${formik.touched.counsellingType && formik.errors.counsellingType ? 'border-red-500' : ''}`}>
+                      <SelectValue placeholder="Select Counselling Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {QUOTA_TYPES.map((quota) => (
+                        <SelectItem key={quota.value} value={quota.value}>
+                          {quota.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 {formik.touched.counsellingType && formik.errors.counsellingType && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
@@ -439,28 +480,35 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['preferredBranch'] = el; }}
               >
                 <Label>Preferred Branch <span className="text-red-500">*</span></Label>
-                <Select
-                  value={formik.values.preferredBranch}
-                  onValueChange={(value) => formik.setFieldValue('preferredBranch', value)}
-                  disabled={profileIsComplete}
-                >
-                  <SelectTrigger className={`h-12 ${formik.touched.preferredBranch && formik.errors.preferredBranch ? 'border-red-500' : ''}`}>
-                    <SelectValue placeholder="Select Your Preferred Branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {coursesLoading ? (
-                      <SelectItem value="loading" disabled>Loading...</SelectItem>
-                    ) : courses.length > 0 ? (
-                      courses.map((course) => (
-                        <SelectItem key={course} value={course}>
-                          {course}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-courses" disabled>No courses available</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                {profileIsComplete ? (
+                  <Input
+                    value={formik.values.preferredBranch}
+                    readOnly
+                    className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
+                  />
+                ) : (
+                  <Select
+                    value={formik.values.preferredBranch}
+                    onValueChange={(value) => formik.setFieldValue("preferredBranch", value)}
+                  >
+                    <SelectTrigger className={`h-12 ${formik.touched.preferredBranch && formik.errors.preferredBranch ? "border-red-500" : ""}`}>
+                      <SelectValue placeholder="Select Your Preferred Branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {coursesLoading ? (
+                        <SelectItem value="loading" disabled>Loading...</SelectItem>
+                      ) : courses.length > 0 ? (
+                        courses.map((course) => (
+                          <SelectItem key={course} value={course}>
+                            {course}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-courses" disabled>No courses available</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
                 {formik.touched.preferredBranch && formik.errors.preferredBranch && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
@@ -480,28 +528,35 @@ export default function StudentInfoPage() {
                   className="space-y-2 transition-all duration-200 rounded-lg p-2 -m-2"
                   ref={(el) => { fieldRefs.current['preference1'] = el; }}
                 >
-                  <Select
-                    value={formik.values.preference1}
-                    onValueChange={(value) => formik.setFieldValue('preference1', value)}
-                    disabled={profileIsComplete}
-                  >
-                    <SelectTrigger className={`h-12 ${formik.touched.preference1 && formik.errors.preference1 ? 'border-red-500' : ''}`}>
-                      <SelectValue placeholder="1st Preference *" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locationsLoading ? (
-                        <SelectItem value="loading" disabled>Loading...</SelectItem>
-                      ) : locations.length > 0 ? (
-                        locations.map((location) => (
-                          <SelectItem key={location} value={location}>
-                            {location}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="no-locations" disabled>No locations available</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  {profileIsComplete ? (
+                    <Input
+                      value={formik.values.preference1}
+                      readOnly
+                      className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
+                    />
+                  ) : (
+                    <Select
+                      value={formik.values.preference1}
+                      onValueChange={(value) => formik.setFieldValue('preference1', value)}
+                    >
+                      <SelectTrigger className={`h-12 ${formik.touched.preference1 && formik.errors.preference1 ? 'border-red-500' : ''}`}>
+                        <SelectValue placeholder="1st Preference *" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationsLoading ? (
+                          <SelectItem value="loading" disabled>Loading...</SelectItem>
+                        ) : locations.length > 0 ? (
+                          locations.map((location) => (
+                            <SelectItem key={location} value={location}>
+                              {location}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-locations" disabled>No locations available</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
                   {formik.touched.preference1 && formik.errors.preference1 && (
                     <p className="text-sm text-red-500 flex items-center gap-1">
                       <AlertTriangle className="h-3 w-3" />
@@ -512,54 +567,68 @@ export default function StudentInfoPage() {
 
                 {/* Preference 2 */}
                 <div className="space-y-2">
-                  <Select
-                    value={formik.values.preference2}
-                    onValueChange={(value) => formik.setFieldValue('preference2', value)}
-                    disabled={profileIsComplete}
-                  >
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="2nd Preference" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locationsLoading ? (
-                        <SelectItem value="loading" disabled>Loading...</SelectItem>
-                      ) : locations.length > 0 ? (
-                        locations.map((location) => (
-                          <SelectItem key={location} value={location}>
-                            {location}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="no-locations" disabled>No locations available</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  {profileIsComplete ? (
+                    <Input
+                      value={formik.values.preference2}
+                      readOnly
+                      className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
+                    />
+                  ) : (
+                    <Select
+                      value={formik.values.preference2}
+                      onValueChange={(value) => formik.setFieldValue('preference2', value)}
+                    >
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="2nd Preference" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationsLoading ? (
+                          <SelectItem value="loading" disabled>Loading...</SelectItem>
+                        ) : locations.length > 0 ? (
+                          locations.map((location) => (
+                            <SelectItem key={location} value={location}>
+                              {location}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-locations" disabled>No locations available</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 {/* Preference 3 */}
                 <div className="space-y-2">
-                  <Select
-                    value={formik.values.preference3}
-                    onValueChange={(value) => formik.setFieldValue('preference3', value)}
-                    disabled={profileIsComplete}
-                  >
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="3rd Preference" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locationsLoading ? (
-                        <SelectItem value="loading" disabled>Loading...</SelectItem>
-                      ) : locations.length > 0 ? (
-                        locations.map((location) => (
-                          <SelectItem key={location} value={location}>
-                            {location}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="no-locations" disabled>No locations available</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  {profileIsComplete ? (
+                    <Input
+                      value={formik.values.preference3}
+                      readOnly
+                      className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
+                    />
+                  ) : (
+                    <Select
+                      value={formik.values.preference3}
+                      onValueChange={(value) => formik.setFieldValue('preference3', value)}
+                    >
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="3rd Preference" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationsLoading ? (
+                          <SelectItem value="loading" disabled>Loading...</SelectItem>
+                        ) : locations.length > 0 ? (
+                          locations.map((location) => (
+                            <SelectItem key={location} value={location}>
+                              {location}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-locations" disabled>No locations available</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
             </div>

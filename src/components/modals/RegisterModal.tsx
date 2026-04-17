@@ -27,7 +27,7 @@ import { INDIAN_STATES } from '@/lib/constants';
 // Step 1 schema - Contact & Personal info
 const step1Schema = z.object({
   phone: z.string().min(10, 'Enter a valid phone number'),
-  email: z.string().email('Enter a valid email address'),
+  email: z.string().email('Please enter a valid email address (@ and domain required)'),
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   city: z.string().min(1, 'City is required'),

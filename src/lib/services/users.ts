@@ -71,6 +71,20 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 }
 
 /**
+ * Get a user by their phone number
+ */
+export async function getUserByPhone(phone: string): Promise<User | null> {
+  await dbConnect();
+  
+  const user = await UserModel.findOne({ phone });
+  if (!user) {
+    return null;
+  }
+  
+  return mapUser(user);
+}
+
+/**
  * Update a user's profile
  */
 export async function updateUser(
