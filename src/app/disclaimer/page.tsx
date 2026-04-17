@@ -23,38 +23,80 @@ export default function Disclaimer() {
       <main className="max-w-4xl mx-auto px-4 pt-32 pb-20">
         <h1 className="text-4xl font-bold text-slate-900 mb-8 font-poppins">Disclaimer</h1>
         
-        <div className="prose prose-slate max-w-none space-y-6 text-slate-600 leading-relaxed">
-          <section>
-            <h2 className="text-2xl font-semibold text-slate-800 mb-4">1. Informational Purposes Only</h2>
-            <p>
-              Rankers Forum is an independent platform and is NOT affiliated with the Medical Counselling Committee (MCC), National Medical Commission (NMC), or any state counseling authority. The information provided on this website is for guidance and informational purposes only.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-slate-800 mb-4">2. Prediction Model</h2>
-            <p>
-              Our college prediction results are based on mathematical models and historical trends. Admission outcomes depend on various factors including, but not limited to, the number of candidates, difficulty levels of the exam, and changing counseling rules. We provide no guarantee that you will secure admission based on our predictions.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-slate-800 mb-4">3. Official Notifications</h2>
-            <p>
-              Users are strongly advised to always refer to the official websites and notifications released by the respective counseling authorities for final information regarding seat matrix, choice filling, and allotment.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-slate-800 mb-4">4. Limitation of Liability</h2>
-            <p>
-              Rankers Forum, its owners, and its contributors shall not be held liable for any loss, damage, or consequence resulting from the use of the information provided on our website.
-            </p>
-          </section>
-
-          <p className="mt-12 text-sm text-slate-400">
-            Last Updated: April 9, 2026
+        <div className="prose prose-slate max-w-none space-y-8 text-slate-600 leading-relaxed">
+          <p className="text-sm font-medium text-[#2F129B]">Effective Date: 17 Apr 2026</p>
+          <p>
+            The information provided on <a href="http://www.rankersforum.com" className="text-indigo-600 hover:underline">www.rankersforum.com</a> is for informational and guidance purposes only.
           </p>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">1. No Professional Advice</h2>
+            <p>The platform does NOT provide:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Legal advice</li>
+              <li>Medical advice</li>
+              <li>Official counselling authority guidance</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">2. Prediction Disclaimer</h2>
+            <p>All seat predictions and rankings:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Are based on historical trends and algorithms</li>
+              <li>May not reflect actual counselling outcomes</li>
+              <li>Should not be considered final or authoritative</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">3. No Affiliation</h2>
+            <p>We are NOT affiliated with:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Government counselling authorities</li>
+              <li>Medical colleges</li>
+              <li>Examination bodies</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">4. User Decision Responsibility</h2>
+            <p>Users are solely responsible for:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Their counselling choices</li>
+              <li>Preference filling decisions</li>
+              <li>Admission-related actions</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">5. Accuracy of Data</h2>
+            <p>
+              While we strive for accuracy, we do not guarantee that all data is complete, current, or error-free.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">6. External Factors</h2>
+            <p>Counselling outcomes may vary due to:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Policy changes</li>
+              <li>Seat matrix updates</li>
+              <li>Reservation changes</li>
+              <li>Competition levels</li>
+            </ul>
+            <p className="mt-4">We are not responsible for such variations.</p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">7. Use at Your Own Risk</h2>
+            <p>By using this website, you acknowledge that you do so at your own risk.</p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">8. Contact</h2>
+            <p>Email: <a href="mailto:contactrankersforum@gmail.com" className="text-indigo-600 hover:underline">contactrankersforum@gmail.com</a></p>
+          </section>
         </div>
       </main>
 
@@ -93,3 +135,4 @@ export default function Disclaimer() {
     </div>
   );
 }
+ 

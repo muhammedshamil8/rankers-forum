@@ -23,52 +23,86 @@ export default function TermsAndConditions() {
       <main className="max-w-4xl mx-auto px-4 pt-32 pb-20">
         <h1 className="text-4xl font-bold text-slate-900 mb-8 font-poppins">Terms & Conditions</h1>
         
-        <div className="prose prose-slate max-w-none space-y-6 text-slate-600 leading-relaxed">
-          <section>
-            <h2 className="text-2xl font-semibold text-slate-800 mb-4">1. Acceptance of Terms</h2>
-            <p>
-              By accessing or using Rankers Forum, you agree to be bound by these Terms and Conditions. If you do not agree with any part of these terms, you must not use our services.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-slate-800 mb-4">2. Use of Services</h2>
-            <p>
-              Rankers Forum provides information and tools based on historical NEET counseling data. Our predictions are intended for informational purposes only and do not guarantee admission to any specific college or university.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-slate-800 mb-4">3. Accuracy of Data</h2>
-            <p>
-              While we strive to provide accurate and up-to-date information, we cannot guarantee the complete accuracy of historical data or future counseling trends. The final admission process is governed by the respective counseling authorities (MCC, State Counseling, etc.).
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-slate-800 mb-4">4. User Responsibilities</h2>
-            <p>
-              Users are responsible for verifying all information and deadlines with official counseling notifications. Rankers Forum will not be held liable for any decisions made based on the information provided on our website.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-slate-800 mb-4">5. Account Registration</h2>
-            <p>
-              To access certain features, you must register for an account. You agree to provide accurate information and maintain the security of your account credentials.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-semibold text-slate-800 mb-4">6. Intellectual Property</h2>
-            <p>
-              The content, logos, and features of Rankers Forum are protected by intellectual property laws. You may not reproduce or distribute any content without our prior written consent.
-            </p>
-          </section>
-
-          <p className="mt-12 text-sm text-slate-400">
-            Last Updated: April 9, 2026
+        <div className="prose prose-slate max-w-none space-y-8 text-slate-600 leading-relaxed">
+          <p className="text-sm font-medium text-[#2F129B]">Effective Date: 17 Apr 2026</p>
+          <p>
+            By accessing and using <a href="http://www.rankersforum.com" className="text-indigo-600 hover:underline">www.rankersforum.com</a>, you agree to comply with these Terms & Conditions.
           </p>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">1. Nature of Service</h2>
+            <p>
+              We provide predictive insights and counselling suggestions for UG and PG medical seat allocation based on user-provided data. These are informational tools only.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">2. No Guarantee of Admission</h2>
+            <p>We do NOT guarantee:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Seat allotment</li>
+              <li>Admission in any institution</li>
+              <li>Accuracy of predictions</li>
+            </ul>
+            <p className="mt-4">
+              All results are probabilistic and based on historical data and algorithms.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">3. User Responsibilities</h2>
+            <p>You agree to:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Provide accurate and truthful information</li>
+              <li>Not misuse the platform</li>
+              <li>Not attempt to manipulate results</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">4. Intellectual Property</h2>
+            <p>
+              All content, algorithms, design, and data on this website are the property of <a href="http://www.rankersforum.com" className="text-indigo-600 hover:underline">www.rankersforum.com</a> and may not be copied or reused without permission.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">5. Limitation of Liability</h2>
+            <p>We are not liable for:</p>
+            <ul className="list-disc pl-6 space-y-2">
+              <li>Admission outcomes</li>
+              <li>Decisions made based on our suggestions</li>
+              <li>Any direct or indirect damages</li>
+            </ul>
+            <p className="mt-4">
+              Use the service at your own risk.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">6. Service Availability</h2>
+            <p>We may modify, suspend, or discontinue services without notice.</p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">7. Termination</h2>
+            <p>We reserve the right to restrict or terminate access if users violate these terms.</p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">8. Governing Law</h2>
+            <p>These terms shall be governed by the laws of India.</p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">9. Changes to Terms</h2>
+            <p>We may update these Terms at any time. Continued use implies acceptance.</p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4 font-poppins">10. Contact</h2>
+            <p>Email: <a href="mailto:contactrankersforum@gmail.com" className="text-indigo-600 hover:underline">contactrankersforum@gmail.com</a></p>
+          </section>
         </div>
       </main>
 
