@@ -36,7 +36,7 @@ export function UserMenu({ user }: UserMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-400 text-white shadow-md hover:opacity-90 transition-all active:scale-95 focus:outline-hidden">
+        <button className="flex items-center cursor-pointer justify-center w-10 h-10 rounded-full bg-slate-400 text-white shadow-md hover:opacity-90 transition-all active:scale-95 focus:outline-hidden">
           {user.photoURL ? (
             <img
               src={user.photoURL}

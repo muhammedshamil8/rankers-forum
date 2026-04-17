@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
 import { UserRole } from '@/types';
+import { LoadingOverlay } from '@/components/layout/LoadingOverlay';
 
 export interface User {
   id: string;
@@ -36,6 +37,8 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   user: User | null;
   loading: boolean;
+  globalLoading: boolean;
+  setGlobalLoading: (loading: boolean) => void;
   error: string | null;
   refreshUser: () => Promise<User | null>;
 }
@@ -46,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [globalLoading, setGlobalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchUser = async (): Promise<User | null> => {
@@ -122,11 +126,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         firebaseUser,
         user,
         loading,
+        globalLoading,
+        setGlobalLoading,
         error,
         refreshUser,
       }}
     >
       {children}
+      <LoadingOverlay isVisible={globalLoading} />
     </AuthContext.Provider>
   );
 }

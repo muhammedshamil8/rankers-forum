@@ -73,7 +73,7 @@ export function Navbar({ user, loading, onLoginClick, onRegisterClick }: NavbarP
                                     <button
                                         onClick={handlePhoneClick}
                                         disabled={isCallbackPending}
-                                        className={`relative md:w-11 md:h-11 w-9 h-9 rounded-full flex items-center justify-center text-white shadow-md transition-all active:scale-95 ${
+                                        className={`relative cursor-pointer md:w-11 md:h-11 w-9 h-9 rounded-full flex items-center justify-center text-white shadow-md transition-all active:scale-95 ${
                                             isCallbackPending 
                                             ? 'bg-slate-200 cursor-not-allowed text-slate-400 shadow-none' 
                                             : 'bg-linear-to-br from-[#2F129B] to-[#3B82F6] hover:opacity-90 hover:scale-105'

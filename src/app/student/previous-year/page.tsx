@@ -163,7 +163,7 @@ export default function PreviousYearPage() {
           <div className="flex items-center gap-2">
             <span className="text-sm text-slate-600">State</span>
             <Select value={stateFilter} onValueChange={setStateFilter}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-48 cursor-pointer">
                 <SelectValue placeholder="All States" />
               </SelectTrigger>
               <SelectContent>

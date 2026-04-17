@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmail, signUpWithEmail, signInWithGoogle, signOut, resetPassword, getAuthErrorMessage, AuthError } from '@/lib/firebase/auth';
 import { useAuth, User } from './useAuth';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface UseAuthActionsReturn {
   login: (email: string, password: string) => Promise<User | null>;
@@ -28,7 +29,8 @@ interface RegisterData {
 
 export function useAuthActions(): UseAuthActionsReturn {
   const router = useRouter();
-  const { refreshUser } = useAuth();
+  const queryClient = useQueryClient();
+  const { refreshUser, setGlobalLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,12 +38,18 @@ export function useAuthActions(): UseAuthActionsReturn {
 
   const login = async (email: string, password: string): Promise<User | null> => {
     setLoading(true);
+    setGlobalLoading(true);
     setError(null);
 
     try {
       await signInWithEmail(email, password);
       // Wait for user data to be refreshed and return it
       const user = await refreshUser();
+      
+      // Clear cache to ensure fresh data for the new user
+      queryClient.clear();
+      sessionStorage.clear();
+      
       router.refresh();
       return user;
     } catch (e) {
@@ -50,11 +58,13 @@ export function useAuthActions(): UseAuthActionsReturn {
       throw e;
     } finally {
       setLoading(false);
+      setGlobalLoading(false);
     }
   };
 
   const register = async (data: RegisterData) => {
     setLoading(true);
+    setGlobalLoading(true);
     setError(null);
 
     try {
@@ -73,6 +83,11 @@ export function useAuthActions(): UseAuthActionsReturn {
       // Then sign in with the credentials
       await signInWithEmail(data.email, data.password);
       await refreshUser();
+      
+      // Clear cache for new user session
+      queryClient.clear();
+      sessionStorage.clear();
+      
       router.refresh();
     } catch (e) {
       if (e instanceof Error) {
@@ -84,16 +99,23 @@ export function useAuthActions(): UseAuthActionsReturn {
       throw e;
     } finally {
       setLoading(false);
+      setGlobalLoading(false);
     }
   };
 
   const loginWithGoogle = async (): Promise<User | null> => {
     setLoading(true);
+    setGlobalLoading(true);
     setError(null);
 
     try {
       await signInWithGoogle();
       const user = await refreshUser();
+      
+      // Clear cache for new user session
+      queryClient.clear();
+      sessionStorage.clear();
+      
       router.refresh();
       return user;
     } catch (e) {
@@ -102,15 +124,21 @@ export function useAuthActions(): UseAuthActionsReturn {
       throw e;
     } finally {
       setLoading(false);
+      setGlobalLoading(false);
     }
   };
 
   const logout = async () => {
     setLoading(true);
+    setGlobalLoading(true);
     setError(null);
 
     try {
       await signOut();
+      
+      // Clear data immediately
+      queryClient.clear();
+      sessionStorage.clear();
 
       // Clear server session
       await fetch('/api/auth/logout', { method: 'POST' });
@@ -124,6 +152,7 @@ export function useAuthActions(): UseAuthActionsReturn {
       throw e;
     } finally {
       setLoading(false);
+      setGlobalLoading(false);
     }
   };
 

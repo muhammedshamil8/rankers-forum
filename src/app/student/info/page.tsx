@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useAuth, useRequireAuth } from '@/lib/hooks';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   NEET_CATEGORIES,
   QUOTA_TYPES,
@@ -51,6 +52,7 @@ export default function StudentInfoPage() {
   const router = useRouter();
   const { user, loading: authLoading, refreshUser } = useAuth();
   const { isAuthorized } = useRequireAuth(['student']);
+  const queryClient = useQueryClient();
   const [logoutOpen, setLogoutOpen] = useState(false);
 
   // Refs for each field to enable scrolling
@@ -135,8 +137,11 @@ export default function StudentInfoPage() {
       return collegesResponse.json();
     },
     onSuccess: async (data) => {
-      // Refresh user session to update hasStudentProfile flag
-      await refreshUser();
+      // Refresh auth state and invalidate profile query
+      await Promise.all([
+        refreshUser(),
+        queryClient.invalidateQueries({ queryKey: ['student-profile'] })
+      ]);
 
       // Store result in sessionStorage and redirect
       sessionStorage.setItem('collegeResult', JSON.stringify(data));
@@ -197,13 +202,18 @@ export default function StudentInfoPage() {
     }
   }, [authLoading, isAuthorized, router]);
 
-  if (authLoading || !isAuthorized || !profileData) {
+  if (authLoading || !isAuthorized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
+          <p className="text-slate-500 animate-pulse">Authenticating...</p>
+        </div>
       </div>
     );
   }
+
+  const isProfileLoading = !profileData;
 
   const checksRemaining = 2 - (student?.checksUsed || 0);
 
@@ -248,14 +258,18 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['rank'] = el; }}
               >
                 <Label htmlFor="rank">Rank <span className="text-red-500">*</span></Label>
-                <Input
-                  id="rank"
-                  type="text"
-                  placeholder="Enter Your Rank"
-                  className={`h-12 ${formik.touched.rank && formik.errors.rank ? 'border-red-500 focus-visible:ring-red-500' : ''} ${profileIsComplete ? 'bg-slate-50 cursor-not-allowed opacity-100 font-medium' : ''}`}
-                  {...formik.getFieldProps('rank')}
-                  readOnly={profileIsComplete}
-                />
+                {isProfileLoading ? (
+                  <Skeleton className="h-12 w-full" />
+                ) : (
+                  <Input
+                    id="rank"
+                    type="text"
+                    placeholder="Enter Your Rank"
+                    className={`h-12 ${formik.touched.rank && formik.errors.rank ? 'border-red-500 focus-visible:ring-red-500' : ''} ${profileIsComplete ? 'bg-slate-50 cursor-not-allowed opacity-100 font-medium' : ''}`}
+                    {...formik.getFieldProps('rank')}
+                    readOnly={profileIsComplete}
+                  />
+                )}
                 {formik.touched.rank && formik.errors.rank && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertTriangle className="h-3 w-3" />
@@ -270,16 +284,20 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['institution'] = el; }}
               >
                 <Label htmlFor="institution">Institution</Label>
-                <Input
-                  id="institution"
-                  name="institution"
-                  placeholder="Enter the Institution"
-                  className={`h-12 ${profileIsComplete ? 'bg-slate-50 cursor-not-allowed opacity-70' : ''}`}
-                  value={formik.values.institution}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  disabled={profileIsComplete}
-                />
+                {isProfileLoading ? (
+                  <Skeleton className="h-12 w-full" />
+                ) : (
+                  <Input
+                    id="institution"
+                    name="institution"
+                    placeholder="Enter the Institution"
+                    className={`h-12 ${profileIsComplete ? 'bg-slate-50 cursor-not-allowed opacity-70' : ''}`}
+                    value={formik.values.institution}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    disabled={profileIsComplete}
+                  />
+                )}
               </div>
 
               {/* Year Field */}
@@ -288,7 +306,9 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['year'] = el; }}
               >
                 <Label>Year <span className="text-red-500">*</span></Label>
-                {profileIsComplete ? (
+                {isProfileLoading ? (
+                  <Skeleton className="h-12 w-full" />
+                ) : profileIsComplete ? (
                   <Input
                     value={formik.values.year}
                     readOnly
@@ -325,7 +345,9 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['domicileState'] = el; }}
               >
                 <Label>Domicile State <span className="text-red-500">*</span></Label>
-                {profileIsComplete ? (
+                {isProfileLoading ? (
+                  <Skeleton className="h-12 w-full" />
+                ) : profileIsComplete ? (
                   <Input
                     value={formik.values.domicileState}
                     readOnly
@@ -362,7 +384,9 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['category'] = el; }}
               >
                 <Label>Category <span className="text-red-500">*</span></Label>
-                {profileIsComplete ? (
+                {isProfileLoading ? (
+                  <Skeleton className="h-12 w-full" />
+                ) : profileIsComplete ? (
                   <Input
                     value={getCategoryLabel(formik.values.category)}
                     readOnly
@@ -399,7 +423,9 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['gender'] = el; }}
               >
                 <Label>Gender <span className="text-red-500">*</span></Label>
-                {profileIsComplete ? (
+                {isProfileLoading ? (
+                  <Skeleton className="h-12 w-full" />
+                ) : profileIsComplete ? (
                   <Input
                     value={getGenderLabel(formik.values.gender)}
                     readOnly
@@ -443,7 +469,9 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['counsellingType'] = el; }}
               >
                 <Label>Counselling Type <span className="text-red-500">*</span></Label>
-                {profileIsComplete ? (
+                {isProfileLoading ? (
+                  <Skeleton className="h-12 w-full" />
+                ) : profileIsComplete ? (
                   <Input
                     value={getCounsellingLabel(formik.values.counsellingType)}
                     readOnly
@@ -480,7 +508,9 @@ export default function StudentInfoPage() {
                 ref={(el) => { fieldRefs.current['preferredBranch'] = el; }}
               >
                 <Label>Preferred Branch <span className="text-red-500">*</span></Label>
-                {profileIsComplete ? (
+                {isProfileLoading ? (
+                  <Skeleton className="h-12 w-full" />
+                ) : profileIsComplete ? (
                   <Input
                     value={formik.values.preferredBranch}
                     readOnly
@@ -528,7 +558,9 @@ export default function StudentInfoPage() {
                   className="space-y-2 transition-all duration-200 rounded-lg p-2 -m-2"
                   ref={(el) => { fieldRefs.current['preference1'] = el; }}
                 >
-                  {profileIsComplete ? (
+                  {isProfileLoading ? (
+                    <Skeleton className="h-12 w-full" />
+                  ) : profileIsComplete ? (
                     <Input
                       value={formik.values.preference1}
                       readOnly
@@ -567,7 +599,9 @@ export default function StudentInfoPage() {
 
                 {/* Preference 2 */}
                 <div className="space-y-2">
-                  {profileIsComplete ? (
+                  {isProfileLoading ? (
+                    <Skeleton className="h-12 w-full" />
+                  ) : profileIsComplete ? (
                     <Input
                       value={formik.values.preference2}
                       readOnly
@@ -600,7 +634,9 @@ export default function StudentInfoPage() {
 
                 {/* Preference 3 */}
                 <div className="space-y-2">
-                  {profileIsComplete ? (
+                  {isProfileLoading ? (
+                    <Skeleton className="h-12 w-full" />
+                  ) : profileIsComplete ? (
                     <Input
                       value={formik.values.preference3}
                       readOnly
