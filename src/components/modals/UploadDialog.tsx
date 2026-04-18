@@ -217,8 +217,8 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadMutation.isPending}
             >
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Choose File
+              {/* <FileSpreadsheet className="h-4 w-4 mr-2" /> */}
+             Upload
             </Button>
           </div>
         </div>

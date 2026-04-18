@@ -124,7 +124,7 @@ export default function CollegePage() {
             </div>
 
             {/* Search Bar */}
-            <div className="relative max-w-lg  w-full sm:w-auto">
+            <div className="relative max-w-2xl  w-full max-w-[450px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 type="text"

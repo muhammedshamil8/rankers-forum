@@ -24,6 +24,8 @@ interface DashboardStats {
   pendingCallbacks: number;
 }
 
+type ApiDate = string | Date | { _seconds: number; _nanoseconds?: number } | null | undefined;
+
 interface Lead {
   id: string;
   studentName: string;
@@ -32,10 +34,24 @@ interface Lead {
   rankUsed: number;
   preferredBranch: string;
   status: string;
-  createdAt: {
-    _seconds: number;
-    _nanoseconds: number;
-  };
+  assignedAt: ApiDate;
+  createdAt: ApiDate;
+}
+
+function formatDate(dateValue: ApiDate) {
+  if (!dateValue) return 'N/A';
+
+  const date = typeof dateValue === 'object' && '_seconds' in dateValue
+    ? new Date(dateValue._seconds * 1000)
+    : new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) return 'N/A';
+
+  return date.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 export default function SuperAdminDashboard() {
@@ -93,7 +109,7 @@ export default function SuperAdminDashboard() {
     pendingCallbacks: 0,
   };
 
-  const leads: Lead[] = leadsData?.leads || [];
+  const leads: Lead[] = (leadsData?.leads || []).filter((lead) => lead.assignedAt);
 
   const statCards = [
     { label: 'Total Registrations', value: stats.totalRegistrations, icon: "/calendar.svg", color: 'bg-indigo-50 text-indigo-600' },
@@ -153,7 +169,7 @@ export default function SuperAdminDashboard() {
                   <div>
                     <p className="text-sm text-slate-500">{stat.label}</p>
                     <p className="text-2xl font-bold text-slate-900">
-                      {statsLoading ? '...' : (statsData?.stats?.[stat.label.toLowerCase().replace(/ /g, '') as keyof DashboardStats] || 0).toLocaleString()}
+                      {statsLoading ? '...' : stat.value.toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -200,11 +216,7 @@ export default function SuperAdminDashboard() {
                         <td className="px-6 py-4 text-sm text-slate-600">{lead.rankUsed}</td>
                         <td className="px-6 py-4 text-sm text-slate-600">{lead.preferredBranch}</td>
                         <td className="px-6 py-4 text-sm text-slate-600">
-                          {lead.createdAt ? new Date(lead.createdAt._seconds * 1000).toLocaleDateString('en-IN', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric'
-                          }) : 'N/A'}
+                          {formatDate(lead.assignedAt)}
                         </td>
                         <td className="px-6 py-4">{getStatusBadge(lead.status, lead.id)}</td>
                       </tr>

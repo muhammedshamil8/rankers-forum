@@ -30,7 +30,7 @@ interface RegisterData {
 export function useAuthActions(): UseAuthActionsReturn {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { refreshUser, setGlobalLoading } = useAuth();
+  const { refreshUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +38,6 @@ export function useAuthActions(): UseAuthActionsReturn {
 
   const login = async (email: string, password: string): Promise<User | null> => {
     setLoading(true);
-    setGlobalLoading(true);
     setError(null);
 
     try {
@@ -58,13 +57,11 @@ export function useAuthActions(): UseAuthActionsReturn {
       throw e;
     } finally {
       setLoading(false);
-      setGlobalLoading(false);
     }
   };
 
   const register = async (data: RegisterData) => {
     setLoading(true);
-    setGlobalLoading(true);
     setError(null);
 
     try {
@@ -99,13 +96,11 @@ export function useAuthActions(): UseAuthActionsReturn {
       throw e;
     } finally {
       setLoading(false);
-      setGlobalLoading(false);
     }
   };
 
   const loginWithGoogle = async (): Promise<User | null> => {
     setLoading(true);
-    setGlobalLoading(true);
     setError(null);
 
     try {
@@ -124,13 +119,11 @@ export function useAuthActions(): UseAuthActionsReturn {
       throw e;
     } finally {
       setLoading(false);
-      setGlobalLoading(false);
     }
   };
 
   const logout = async () => {
     setLoading(true);
-    setGlobalLoading(true);
     setError(null);
 
     try {
@@ -152,7 +145,6 @@ export function useAuthActions(): UseAuthActionsReturn {
       throw e;
     } finally {
       setLoading(false);
-      setGlobalLoading(false);
     }
   };
 

@@ -317,7 +317,7 @@ export default function StudentsPage() {
             </div>
 
             {/* Search Bar */}
-            <div className="relative max-w-lg w-full sm:w-auto">
+            <div className="relative max-w-2xl w-full max-w-[450px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 type="text"
@@ -395,7 +395,7 @@ export default function StudentsPage() {
                         <div className="flex items-center gap-4">
                           <button
                             onClick={() => handleViewDetails(student)}
-                            className="text-indigo-600 hover:text-indigo-700"
+                            className="text-indigo-600 hover:text-indigo-700 cursor-pointer"
                           >
                             <Image src="/details.svg" alt="Details" width={24} height={24} />
                           </button>
@@ -405,9 +405,10 @@ export default function StudentsPage() {
                           >
                             {
                               student.hasCallback ? (
-                                <Image src="/callbackBlue.svg" alt="Callback" width={24} height={24} />
+                                  <Users className="h-5 w-5 text-blue-500" />
+                               
                               ) : (
-                                <Image src="/callbackGray.svg" alt="Callback" width={24} height={24} />
+                               <Users className="h-5 w-5" />
                               )
                             }
                           </button>
@@ -485,11 +486,11 @@ export default function StudentsPage() {
                             onClick={() => handleAssignCallback(lead)}
                             className="text-indigo-600 hover:text-indigo-700"
                           >
-                            <Users className="h-5 w-5" />
+                            <Users className="h-5 w-5 text-blue-500" />
                           </button>
-                          <button className="text-slate-400 hover:text-slate-600">
+                          {/* <button className="text-slate-400 hover:text-slate-600">
                             <Download className="h-5 w-5" />
-                          </button>
+                          </button> */}
                         </div>
                       </td>
                     </tr>
