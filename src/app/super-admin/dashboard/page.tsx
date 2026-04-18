@@ -109,7 +109,7 @@ export default function SuperAdminDashboard() {
     pendingCallbacks: 0,
   };
 
-  const leads: Lead[] = (leadsData?.leads || []).filter((lead) => lead.assignedAt);
+  const leads: Lead[] = (leadsData?.leads || []).filter((lead: Lead) => lead.assignedAt);
 
   const statCards = [
     { label: 'Total Registrations', value: stats.totalRegistrations, icon: "/calendar.svg", color: 'bg-indigo-50 text-indigo-600' },

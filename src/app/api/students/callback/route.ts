@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
 import { getUserById } from '@/lib/services/users';
 import { getStudentByUserId } from '@/lib/services/students';
-import { createLead, getLeads, requestCallback } from '@/lib/services/leads';
+import { getLeads } from '@/lib/services/leads';
 import { incrementStat } from '@/lib/services/stats';
+import { LeadModel } from '@/models/Lead';
 
 /**
  * Helper to verify student session
@@ -88,12 +89,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if there's already a pending callback request
-    const leads = await getLeads();
-    const existingLead = leads.find(lead => 
-      lead.studentId === uid && 
-      lead.callbackRequested && 
-      ['new', 'assigned', 'in_progress'].includes(lead.status)
-    );
+    const existingLead = await LeadModel.findOne({
+      studentId: uid,
+      callbackRequested: true,
+      status: { $in: ['new', 'assigned', 'in_progress'] },
+    }).sort({ createdAt: -1 });
 
     if (existingLead) {
       return NextResponse.json({ 
@@ -126,30 +126,70 @@ export async function POST(request: NextRequest) {
       studentLocation = student.domicileState;
     }
 
-    // Create a new lead with callback requested
-    const lead = await createLead({
-      studentId: uid,
-      studentName,
-      studentPhone,
-      studentEmail,
-      studentLocation,
-      rankUsed: student.rank || 0,
-      preferredBranch: student.preferredBranch || '',
-      year: student.yearOfPassing || new Date().getFullYear(),
-    });
+    // Reuse the student's latest active lead when possible to avoid duplicates.
+    let leadId: string | null = null;
 
-    // Update the lead to mark callback as requested
-    await requestCallback(lead.id);
+    const updatedLead = await LeadModel.findOneAndUpdate(
+      {
+        studentId: uid,
+        callbackRequested: false,
+        status: { $in: ['new', 'assigned', 'in_progress'] },
+      },
+      {
+        $set: {
+          callbackRequested: true,
+          studentName,
+          studentPhone,
+          studentEmail,
+          studentLocation,
+          rankUsed: student.rank || 0,
+          preferredBranch: student.preferredBranch || '',
+          year: student.yearOfPassing || new Date().getFullYear(),
+        },
+      },
+      { sort: { createdAt: -1 }, new: true }
+    );
+
+    if (updatedLead) {
+      leadId = updatedLead._id.toString();
+    } else {
+      // If no active lead exists, create an idempotent pending callback lead.
+      const pendingLead = await LeadModel.findOneAndUpdate(
+        {
+          studentId: uid,
+          callbackRequested: true,
+          status: 'new',
+          assignedAdminId: null,
+        },
+        {
+          $setOnInsert: {
+            studentId: uid,
+            studentName,
+            studentPhone,
+            studentEmail,
+            studentLocation,
+            rankUsed: student.rank || 0,
+            preferredBranch: student.preferredBranch || '',
+            year: student.yearOfPassing || new Date().getFullYear(),
+            status: 'new',
+            callbackRequested: true,
+            assignedAdminId: null,
+            assignedAt: null,
+          },
+        },
+        { upsert: true, new: true }
+      );
+
+      leadId = pendingLead._id.toString();
+    }
 
     // Update dashboard stats (totalRequests handled gracefully in createLead, callbacks explicitly here if tracked differently)
-    // The previous code had totalCallbacks incremented on global stats. But DashboardStats schema doesn't have totalCallbacks?
-    // Let's increment pendingCallbacks here because it's a new callback manually requested.
     await incrementStat('pendingCallbacks');
 
     return NextResponse.json({ 
       success: true, 
       message: 'Callback request submitted successfully',
-      leadId: lead.id,
+      leadId,
     });
   } catch (error) {
     console.error('Create callback error:', error);

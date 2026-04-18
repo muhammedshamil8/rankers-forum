@@ -23,15 +23,20 @@ import {
 } from '@/components/ui/select';
 import { useAuthActions } from '@/lib/hooks';
 import { INDIAN_STATES } from '@/lib/constants';
+import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 
 // Step 1 schema - Contact & Personal info
 const step1Schema = z.object({
-  phone: z.string().min(10, 'Enter a valid phone number'),
+  phone: z.string()
+    .trim()
+    .min(1, 'Phone number is required')
+    .refine((value) => isValidPhoneNumber(value), 'Enter a valid phone number')
+    .transform((value) => normalizePhoneNumber(value)),
   email: z.string().email('Please enter a valid email address (@ and domain required)'),
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  city: z.string().min(1, 'City is required'),
-  state: z.string().min(1, 'State is required'),
+  firstName: z.string().trim().min(1, 'First name is required'),
+  lastName: z.string().trim().min(1, 'Last name is required'),
+  city: z.string().trim().min(1, 'City is required'),
+  state: z.string().trim().min(1, 'State is required'),
 });
 
 // Step 2 schema - Password

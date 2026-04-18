@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserByPhone, getUserByEmail } from '@/lib/services/users';
+import { getPhoneLookupVariants } from '@/lib/phone';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,12 +14,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Attempt to find by phone
-    let user = await getUserByPhone(identifier);
+    let user = null;
+
+    // Attempt to find by phone (supports spaces, dashes, + prefix variations)
+    const phoneCandidates = getPhoneLookupVariants(identifier);
+    for (const candidate of phoneCandidates) {
+      user = await getUserByPhone(candidate);
+      if (user) {
+        break;
+      }
+    }
     
     // If not found by phone, try email (in case client is unsure)
     if (!user && identifier.includes('@')) {
-      user = await getUserByEmail(identifier);
+      user = await getUserByEmail(identifier.trim().toLowerCase());
     }
 
     if (!user) {

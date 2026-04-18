@@ -28,6 +28,7 @@ export function CallbackModal({
   const router = useRouter();
   const [requestCallback, setRequestCallback] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [navigatingToForm, setNavigatingToForm] = useState(false);
 
   // Check existing callback status
   const { data: callbackStatus, isLoading: statusLoading } = useQuery({
@@ -60,9 +61,23 @@ export function CallbackModal({
     },
   });
 
+  const resetModalState = () => {
+    setSubmitted(false);
+    setRequestCallback(false);
+    submitMutation.reset();
+  };
+
   const handleGoToForm = () => {
+    if (navigatingToForm) return;
+
+    setNavigatingToForm(true);
+    resetModalState();
     onOpenChange(false);
-    router.push('/student/info');
+
+    // Defer navigation by a frame so dialog close animation completes cleanly.
+    requestAnimationFrame(() => {
+      router.push('/student/info');
+    });
   };
 
   const handleSubmit = () => {
@@ -75,8 +90,8 @@ export function CallbackModal({
   };
 
   const handleClose = () => {
-    setSubmitted(false);
-    setRequestCallback(false);
+    resetModalState();
+    setNavigatingToForm(false);
     onOpenChange(false);
   };
 
@@ -84,7 +99,7 @@ export function CallbackModal({
   if (statusLoading && hasStudentProfile) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md [&>button]:hidden">
           <DialogTitle className="sr-only">Checking callback status</DialogTitle>
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
@@ -141,8 +156,17 @@ export function CallbackModal({
             <Button variant="outline" onClick={handleClose} className="flex-1">
               Cancel
             </Button>
-            <Button onClick={handleGoToForm} className="flex-1">
-              Fill Details <ArrowRight className="ml-2 h-4 w-4" />
+            <Button onClick={handleGoToForm} className="flex-1" disabled={navigatingToForm}>
+              {navigatingToForm ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Opening...
+                </>
+              ) : (
+                <>
+                  Fill Details <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>
