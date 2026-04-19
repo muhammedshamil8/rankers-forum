@@ -42,6 +42,8 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status') as LeadStatus | null;
+    const callbackRequested = searchParams.get('callbackRequested') === 'true' ? true : 
+                            searchParams.get('callbackRequested') === 'false' ? false : undefined;
     const adminId = searchParams.get('adminId');
     const limit = parseInt(searchParams.get('limit') || '20');
     const startAfter = searchParams.get('startAfter') || undefined;
@@ -50,12 +52,14 @@ export async function GET(request: NextRequest) {
     // Super admin sees all, with optional adminId filter
     const options: {
       status?: LeadStatus;
+      callbackRequested?: boolean;
       assignedAdminId?: string;
       limit: number;
       startAfter?: string;
     } = {
       limit,
       startAfter,
+      callbackRequested,
     };
 
     if (status) {

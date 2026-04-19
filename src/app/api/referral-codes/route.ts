@@ -10,20 +10,7 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     const codes = await ReferralCodeModel.find({ isActive: true }).sort({ code: 1 });
-
-    // Seed some codes if none exist yet (for demo/development)
-    if (codes.length === 0) {
-      const demoCodes = [
-        { code: 'REF100', description: 'Special Reference 100' },
-        { code: 'WELCOME50', description: 'Welcome Discount' },
-        { code: 'STUDY2024', description: 'Academic Year 2024' },
-      ];
-      return NextResponse.json({
-        codes: demoCodes,
-        totalCount: demoCodes.length,
-      });
-    }
-
+    
     return NextResponse.json({
       codes: codes.map(c => ({ code: c.code, description: c.description })),
       totalCount: codes.length,

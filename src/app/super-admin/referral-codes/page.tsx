@@ -36,6 +36,11 @@ export default function ReferralCodesPage() {
   const [newCode, setNewCode] = useState('');
   const [description, setDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fetch codes
   const { data, isLoading } = useQuery({
@@ -166,7 +171,7 @@ export default function ReferralCodesPage() {
                           </Badge>
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-500">
-                          {new Date(item.createdAt).toLocaleDateString()}
+                          {mounted ? new Date(item.createdAt).toLocaleDateString() : '--/--/----'}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end">

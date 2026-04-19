@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -154,6 +155,9 @@ export function RegisterModal({
           <DialogTitle className="text-2xl font-bold">
             {step === 1 ? 'Register' : 'Set Up New Password'}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {step === 1 ? 'Create a new account to get started.' : 'Update your password for your account.'}
+          </DialogDescription>
         </DialogHeader>
 
         {error && (

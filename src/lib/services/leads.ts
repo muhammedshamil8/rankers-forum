@@ -56,33 +56,61 @@ function mapFollowup(doc: any): LeadFollowup {
 }
 
 /**
- * Create a new lead when student performs college lookup
+ * Create or update a lead when student performs college lookup
+ * Uses an atomic UPSERT strategy to prevent duplicate leads even under race conditions
  */
 export async function createLead(data: CreateLeadInput): Promise<Lead> {
   await dbConnect();
   
-  const lead = await LeadModel.create({
-    ...data,
-    status: 'new',
-    callbackRequested: false,
-    assignedAdminId: null,
-    assignedAt: null,
+  const query = {
+    studentId: data.studentId,
+    // Broaden the search to any active lead for this student to prevent duplicates 
+    // during a single session/fill process
+    status: { $in: ['new', 'assigned', 'in_progress'] }
+  };
+
+  const update = {
+    $set: {
+      ...data,
+      updatedAt: new Date()
+    },
+    $setOnInsert: {
+      status: 'new',
+      callbackRequested: false,
+      assignedAdminId: null,
+      assignedAt: null,
+      createdAt: new Date()
+    }
+  };
+
+  // Atomic operation to prevent race conditions
+  const result = await LeadModel.findOneAndUpdate(query, update, {
+    upsert: true,
+    new: true,
+    rawResult: true // This helps us know if it was an insert or update
   });
 
-  // Increment totalRequests in stats
-  let statsDoc = await DashboardStatsModel.findOne();
-  if (!statsDoc) {
-    statsDoc = await DashboardStatsModel.create({
-      totalRegistrations: 0,
-      totalInfoFilled: 0,
-      totalRequests: 0,
-      pendingCallbacks: 0,
+  const lead = result.value || result;
+  
+  // ONLY increment totalRequests in stats if a NEW document was actually inserted
+  // mongoose findOneAndUpdate result contains 'lastErrorObject.updatedExisting'
+  const isNew = !(result.lastErrorObject?.updatedExisting);
+  
+  if (isNew) {
+    let statsDoc = await DashboardStatsModel.findOne();
+    if (!statsDoc) {
+      statsDoc = await DashboardStatsModel.create({
+        totalRegistrations: 0,
+        totalInfoFilled: 0,
+        totalRequests: 0,
+        pendingCallbacks: 0,
+      });
+    }
+    
+    await DashboardStatsModel.findByIdAndUpdate(statsDoc._id, {
+      $inc: { totalRequests: 1 }
     });
   }
-  
-  await DashboardStatsModel.findByIdAndUpdate(statsDoc._id, {
-    $inc: { totalRequests: 1 }
-  });
 
   return mapLead(lead);
 }
@@ -106,6 +134,7 @@ export async function getLeadById(id: string): Promise<Lead | null> {
  */
 export async function getLeads(options: {
   status?: LeadStatus;
+  callbackRequested?: boolean;
   assignedAdminId?: string;
   limit?: number;
   startAfter?: string;
@@ -118,6 +147,10 @@ export async function getLeads(options: {
     query.status = options.status;
   }
   
+  if (options.callbackRequested !== undefined) {
+    query.callbackRequested = options.callbackRequested;
+  }
+
   if (options.assignedAdminId) {
     query.assignedAdminId = options.assignedAdminId;
   }

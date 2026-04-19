@@ -80,10 +80,13 @@ export function getAuthErrorMessage(error: AuthError): string {
       return 'Password should be at least 6 characters.';
     case 'auth/user-disabled':
       return 'This account has been disabled. Please contact support.';
-    case 'auth/user-not-found':
-      return 'No account found with this email.';
     case 'auth/wrong-password':
-      return 'Incorrect password. Please try again.';
+    case 'auth/user-not-found':
+    case 'auth/invalid-login-credentials':
+    case 'auth/invalid-credential':
+    case 'INVALID_LOGIN_CREDENTIALS':
+    case 'invalid-credential':
+      return 'Incorrect email or password. Please try again.';
     case 'auth/too-many-requests':
       return 'Too many failed attempts. Please try again later.';
     case 'auth/popup-closed-by-user':

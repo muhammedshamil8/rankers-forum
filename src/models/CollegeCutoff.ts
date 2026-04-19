@@ -36,5 +36,10 @@ const CollegeCutoffSchema = new Schema<ICollegeCutoff>(
 // Indexes are super important here since we run heavy queries against this table
 CollegeCutoffSchema.index({ rank: 1, category: 1 });
 CollegeCutoffSchema.index({ collegeName: 'text', courseName: 'text' });
+// Compound unique index for idempotency
+CollegeCutoffSchema.index(
+  { collegeName: 1, courseName: 1, category: 1, year: 1, quota: 1 }, 
+  { unique: true }
+);
 
 export const CollegeCutoffModel = mongoose.models.CollegeCutoff || mongoose.model<ICollegeCutoff>('CollegeCutoff', CollegeCutoffSchema);

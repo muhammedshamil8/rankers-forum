@@ -96,8 +96,10 @@ function normalizeExcelData(rows: any[], year: number): NormalizedCutoff[] {
     
     if (!collegeName || !courseName) continue;
 
-    // Create unique key for deduplication
-    const key = `${collegeName}|${courseName}|${category}`;
+    // Create unique key for deduplication (Name + Course + Category + Quota)
+    // Quota is essential here because a college can have different ranks for different seat types
+    const rawQuota = (row['Quota'] || '').toString().trim() || '';
+    const key = `${collegeName}|${courseName}|${category}|${rawQuota}`;
 
     // Always overwrite with later row (last wins)
     const city = cleanCommas((row['City'] || '').toString());
@@ -120,7 +122,7 @@ function normalizeExcelData(rows: any[], year: number): NormalizedCutoff[] {
       collegeName: collegeName,
       collegeLocation: cleanCommas(city ? `${city}, ${state}` : state),
       collegeType: normalizedType,
-      quota: (row['Quota'] || '').toString().trim() || '',
+      quota: rawQuota,
       city: city,
       state: state,
       courseName: courseName,
@@ -310,112 +312,52 @@ export async function processExcelUpload(
     console.log(`DEBUG: Failed validation: ${failedRows}`);
     console.log(`DEBUG: Valid rows for processing: ${validRows.length}`);
 
-    // Step 2: Normalize data (validRows are now already mapped to EXPECTED_COLUMNS keys)
+    // Step 2: Normalize data (deduplicate within the Excel file itself)
     const normalizedData = normalizeExcelData(validRows, year);
-    console.log(`DEBUG: Rows after deduplication: ${normalizedData.length}`);
+    console.log(`DEBUG: Rows after Excel deduplication: ${normalizedData.length}`);
 
-    // Step 3: Extract unique locations and courses (Still here for compatibility with callers, handled automatically by MongoDB distincts)
+    // Step 3: Extract unique locations and courses for legacy sync triggers
     const locations = extractLocations(rows);
     const courses = extractCourses(rows);
 
-    // Step 4: Refactored: Fetch all existing MongoDB records for this year for in-memory comparison
-    console.log(`DEBUG: Fetching existing cutoffs for year ${year}...`);
-    const existingCutoffs = await getCutoffsByYear(year);
-    
-    // Build an in-memory Map for existing DB records using a unique key
-    const dbMap = new Map<string, CollegeRankCutoff>();
-    existingCutoffs.forEach(item => {
-      // CLEAN the DB name before using it as a key to match against cleaned Excel data
-      const cleanDbName = cleanCommas(item.collegeName);
-      const key = `${cleanDbName}|${item.courseName}|${item.category}|${item.year}`;
-      dbMap.set(key, item);
-    });
+    // Step 4: Build Bulk Upsert Operations
+    // We use Name + Course + Category + Year + Quota as the unique filter
+    const bulkOps = normalizedData.map(item => ({
+      updateOne: {
+        filter: { 
+          collegeName: item.collegeName, 
+          courseName: item.courseName, 
+          category: item.category, 
+          year: item.year,
+          quota: item.quota 
+        },
+        update: { $set: { ...item, updatedAt: new Date() } },
+        upsert: true
+      }
+    }));
 
-    // Build another Map for normalized Excel data
-    const excelMap = new Map<string, NormalizedCutoff>();
-    normalizedData.forEach(item => {
-      const key = `${item.collegeName}|${item.courseName}|${item.category}|${item.year}`;
-      excelMap.set(key, item);
-    });
-
-    const bulkOps: any[] = [];
     let insertedCount = 0;
     let updatedCount = 0;
-    let skippedCount = 0;
+    let upsertedCount = 0;
 
-    // Step 5: Compare both datasets and build bulk operations
-    for (const [key, excelItem] of excelMap.entries()) {
-      const dbItem = dbMap.get(key);
-
-      if (!dbItem) {
-        // CASE: Key exists only in Excel -> INSERT
-        insertedCount++;
-        bulkOps.push({
-          updateOne: {
-            filter: { 
-              collegeName: excelItem.collegeName, 
-              courseName: excelItem.courseName, 
-              category: excelItem.category, 
-              year: excelItem.year 
-            },
-            update: { $set: { ...excelItem, createdAt: new Date() } },
-            upsert: true
-          }
-        });
-      } else {
-        // CASE: Key exists in both -> Check for changes
-        const isChanged = (
-          dbItem.rank !== excelItem.rank ||
-          dbItem.courseFees !== excelItem.courseFees ||
-          dbItem.collegeType !== excelItem.collegeType ||
-          dbItem.quota !== excelItem.quota ||
-          dbItem.city !== excelItem.city ||
-          dbItem.state !== excelItem.state ||
-          dbItem.collegeLocation !== excelItem.collegeLocation
-        );
-
-        if (isChanged) {
-          // UPDATE
-          updatedCount++;
-          bulkOps.push({
-            updateOne: {
-              filter: { 
-                collegeName: excelItem.collegeName, 
-                courseName: excelItem.courseName, 
-                category: excelItem.category, 
-                year: excelItem.year 
-              },
-              update: { $set: excelItem },
-              upsert: true
-            }
-          });
-        } else {
-          // SKIP/UNCHANGED
-          skippedCount++;
-        }
-      }
-    }
-
-    console.log(`DEBUG: Stats: INSERTED=${insertedCount}, UPDATED=${updatedCount}, SKIPPED=${skippedCount}`);
-
-    // Step 6: Execute bulk write if there are operations
-    let finalProcessedCount = 0;
+    // Step 5: Execute bulk write
     if (bulkOps.length > 0) {
-      const { insertedCount, modifiedCount, upsertedCount } = await bulkUpsertCutoffs(bulkOps);
-      finalProcessedCount = insertedCount + modifiedCount + upsertedCount;
-      console.log(`DEBUG: bulkWrite Result: Inserted=${insertedCount}, Modified=${modifiedCount}, Upserted=${upsertedCount}`);
+      const result = await bulkUpsertCutoffs(bulkOps);
+      insertedCount = result.insertedCount;
+      updatedCount = result.modifiedCount;
+      upsertedCount = result.upsertedCount;
+      console.log(`DEBUG: bulkWrite Result: Inserted=${insertedCount}, Modified=${updatedCount}, Upserted=${upsertedCount}`);
     }
 
-    // Step 7: Sync locations and courses (Trigger the legacy stubs)
+    // Step 6: Sync legacy collections
     await syncLocations(locations);
     await syncCourses(courses);
 
-    // Final update
+    // Final update to the upload log
     const updateData = {
-      processedRows: insertedCount + updatedCount,
-      insertedCount,
-      updatedCount,
-      skippedCount,
+      processedRows: normalizedData.length,
+      insertedCount: insertedCount + upsertedCount,
+      updatedCount: updatedCount,
       failedRows,
       errorLog,
       status: failedRows === rows.length ? 'failed' : 'completed',

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "create-super-admin": "tsx scripts/create-super-admin.ts"
+    
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

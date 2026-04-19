@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAuthActions } from '@/lib/hooks';
@@ -32,6 +33,9 @@ export function LogoutModal({ open, onOpenChange }: LogoutModalProps) {
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">Logout</DialogTitle>
+          <DialogDescription className="sr-only">
+            Are you sure you want to log out?
+          </DialogDescription>
         </DialogHeader>
 
         <p className="text-center text-slate-600 py-4">

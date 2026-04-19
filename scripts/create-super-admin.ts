@@ -4,8 +4,9 @@
  * This script creates a super admin user in Firebase and MongoDB.
  * Run with: npx ts-node --skip-project scripts/create-super-admin.ts
  * 
- * Or add to package.json scripts:
+ * Or if  package.json have then run:
  * "create-super-admin": "tsx scripts/create-super-admin.ts"
+ * npm run create-super-admin
  */
 
 import { initializeApp, cert, getApps } from 'firebase-admin/app';

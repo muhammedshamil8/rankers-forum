@@ -76,41 +76,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return await fetchUser();
   };
 
+  const [isEstablishingSession, setIsEstablishingSession] = useState(false);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setFirebaseUser(firebaseUser);
-
       if (firebaseUser) {
-        // Get ID token and send to server
-        try {
-          const idToken = await firebaseUser.getIdToken();
+        setFirebaseUser(firebaseUser);
+        // Only establish session if we don't already have a valid user
+        // and we aren't already in the middle of logging in
+        if (!user && !isEstablishingSession) {
+          try {
+            setIsEstablishingSession(true);
+            const idToken = await firebaseUser.getIdToken();
 
-          const response = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken }),
-          });
+            const response = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ idToken }),
+            });
 
-          if (response.ok) {
-            const data = await response.json();
-            setUser(data.user);
-            setError(null);
-          } else {
+            if (response.ok) {
+              const data = await response.json();
+              setUser(data.user);
+              setError(null);
+            } else {
+              setUser(null);
+            }
+          } catch (err) {
+            console.error('Session establishment error:', err);
             setUser(null);
+          } finally {
+            setIsEstablishingSession(false);
+            setLoading(false);
           }
-        } catch {
-          setUser(null);
-          setError('Failed to authenticate');
+        } else if (user) {
+          setLoading(false);
         }
       } else {
+        setFirebaseUser(null);
         setUser(null);
+        setIsEstablishingSession(false);
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [user, isEstablishingSession]);
 
   // Also check session on mount
   useEffect(() => {

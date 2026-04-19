@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,6 +75,9 @@ export function ForgotPasswordModal({
           <DialogTitle className="text-2xl">
             {sent ? 'Check Your Email' : 'Reset Password'}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {sent ? 'Instructions sent to your email.' : 'Enter your email to reset your password.'}
+          </DialogDescription>
         </DialogHeader>
 
         {sent ? (

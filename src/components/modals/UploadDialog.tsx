@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -116,7 +117,9 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-xl font-semibold">Upload College Data</DialogTitle>
-            
+            <DialogDescription className="sr-only">
+              Upload an Excel file containing hospital and college data.
+            </DialogDescription>
           </div>
         </DialogHeader>
 

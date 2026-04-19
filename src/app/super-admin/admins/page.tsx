@@ -260,6 +260,9 @@ export default function AdminManagementPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create New Admin</DialogTitle>
+            <DialogDescription className="sr-only">
+              Fill in the details below to create a new administrator account.
+            </DialogDescription>
           </DialogHeader>
 
           <form
@@ -394,6 +397,9 @@ export default function AdminManagementPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Admin Details</DialogTitle>
+            <DialogDescription className="sr-only">
+              Detailed view of the administrator's profile and performance.
+            </DialogDescription>
           </DialogHeader>
 
           {selectedAdmin && (
@@ -472,6 +478,9 @@ export default function AdminManagementPage() {
             <DialogTitle>
               Leads Assigned to {selectedAdmin?.firstName} {selectedAdmin?.lastName}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              List of all leads currently assigned to this administrator.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto mt-4">

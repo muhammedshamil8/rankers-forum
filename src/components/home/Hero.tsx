@@ -58,7 +58,7 @@ export function Hero({ onCheckColleges }: HeroProps) {
                         <Image src="/doctor2.webp" alt="Hero Background"
                             width={480}
                             height={480}
-                            quality={100}
+                            quality={75}
                             className="object-cover object-right w-full h-full scale-x-[-1]"
                         />
                     </div>
@@ -93,7 +93,7 @@ export function Hero({ onCheckColleges }: HeroProps) {
                         <Image src="/doctor.webp" alt="Hero Background"
                             width={480}
                             height={480}
-                            quality={100}
+                            quality={75}
                             className="object-cover w-[210px] h-[210px] md:w-[520px] md:h-[520px] lg:w-[400px] lg:h-[400px]"
                         />
                     </div>

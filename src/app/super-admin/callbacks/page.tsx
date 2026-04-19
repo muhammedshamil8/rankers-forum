@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useAuth, useRequireAuth } from '@/lib/hooks';
@@ -260,6 +261,9 @@ function SuperAdminCallbacksContent() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Assign Callback</DialogTitle>
+            <DialogDescription className="sr-only">
+              Assign this callback request to an administrator for follow-up.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {selectedLead && (

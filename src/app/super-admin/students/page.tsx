@@ -78,6 +78,11 @@ export default function StudentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fetch students
   const { data: studentsData, isLoading: studentsLoading } = useQuery({
@@ -99,6 +104,7 @@ export default function StudentsPage() {
       const params = new URLSearchParams();
       if (stateFilter !== 'all') params.append('state', stateFilter);
       params.append('status', 'new');
+      params.append('callbackRequested', 'true');
       const response = await fetch(`/api/admin/leads?${params}`);
       if (!response.ok) throw new Error('Failed to fetch leads');
       return response.json();
@@ -338,7 +344,7 @@ export default function StudentsPage() {
         <h2 className="text-2xl font-bold text-slate-900">
           {activeTab === 'details' ? 'Students List' : 'Callback Requests'}
         </h2>
-        <p className="text-sm text-slate-500">Generated on {new Date().toLocaleDateString()}</p>
+        <p className="text-sm text-slate-500">Generated on {mounted ? new Date().toLocaleDateString() : '--/--/----'}</p>
       </div>
 
       {/* Students Table */}

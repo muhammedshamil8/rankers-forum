@@ -525,11 +525,20 @@ export default function StudentResultPage() {
                 </div>
 
                 {/* Action Button */}
-                <div className="flex justify-end pt-2">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                  <div className="text-xs text-amber-600 font-medium">
+                    * At least one location preference is required
+                  </div>
                   <Button 
-                    onClick={() => updatePrefsMutation.mutate(prefs)}
+                    onClick={() => {
+                      if (!prefs.preference1 || prefs.preference1 === '') {
+                        setApiError('Please select at least one preferred location.');
+                        return;
+                      }
+                      updatePrefsMutation.mutate(prefs);
+                    }}
                     disabled={updatePrefsMutation.isPending}
-                    className="h-12 bg-linear-to-r from-[#2F129B] to-[#6366F1] rounded-xl px-8 shadow-md hover:shadow-lg transition-all"
+                    className="h-12 bg-linear-to-r from-[#2F129B] to-[#6366F1] rounded-xl px-8 shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
                   >
                     {updatePrefsMutation.isPending ? (
                       <>

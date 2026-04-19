@@ -97,7 +97,14 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields (Problem 7: domicileState now optional)
     if (!rank || !yearOfPassing || !category || !gender || !counsellingType || !preferredBranch) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      const missing = [];
+      if (!rank) missing.push('rank');
+      if (!category) missing.push('category');
+      if (!gender) missing.push('gender');
+      
+      return NextResponse.json({ 
+        error: `Missing required fields: ${missing.join(', ')}` 
+      }, { status: 400 });
     }
 
     const existingStudent = await getStudentByUserId(uid);

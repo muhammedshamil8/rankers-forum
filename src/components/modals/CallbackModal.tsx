@@ -101,6 +101,7 @@ export function CallbackModal({
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md [&>button]:hidden">
           <DialogTitle className="sr-only">Checking callback status</DialogTitle>
+          <DialogDescription className="sr-only">Please wait while we check your callback request status.</DialogDescription>
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
           </div>
@@ -225,7 +226,7 @@ export function CallbackModal({
             </DialogTitle>
           </div>
           <DialogDescription className="text-slate-600">
-            {/* Get answers about your college selection and personalized guidance based on your profile */}
+            Get personalized guidance about your college options.
           </DialogDescription>
         </DialogHeader>
 
