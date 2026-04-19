@@ -3,8 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2, AlertTriangle, Building2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import Image from 'next/image';
+import {
+  Loader2,
+  AlertTriangle,
+  Building2,
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  Save,
+  ArrowRight
+} from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -12,11 +21,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { useAuth, useRequireAuth } from '@/lib/hooks';
-import { useQuery } from '@tanstack/react-query';
-import { INDIAN_STATES } from '@/lib/constants';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { INDIAN_STATES, COUNSELLING_TYPES } from '@/lib/constants';
 import { LogoutModal } from '@/components/modals';
-import Image from 'next/image';
 
 interface College {
   id: string;
@@ -60,6 +72,20 @@ export default function StudentResultPage() {
   const [stateFilter, setStateFilter] = useState('all');
   const [resultData, setResultData] = useState<ResultData | null>(null);
   const [expandedCollege, setExpandedCollege] = useState<string | null>(null);
+  const [showPreferences, setShowPreferences] = useState(true);
+  const [hasInitializedPreferences, setHasInitializedPreferences] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
+  
+  const queryClient = useQueryClient();
+
+  // Preferences local state
+  const [prefs, setPrefs] = useState({
+    counsellingType: '',
+    preferredBranch: '',
+    preference1: '',
+    preference2: 'none',
+    preference3: 'none',
+  });
 
   // 1. Try to get data from sessionStorage first
   useEffect(() => {
@@ -87,6 +113,86 @@ export default function StudentResultPage() {
       return resp.json();
     },
     enabled: !!isAuthorized,
+  });
+
+  // Sync preferences from profile
+  useEffect(() => {
+    if (profileData?.student) {
+      const { counsellingType, preferredBranch, locationPreference1, locationPreference2, locationPreference3 } = profileData.student;
+      setPrefs({
+        counsellingType: counsellingType || '',
+        preferredBranch: preferredBranch || '',
+        preference1: locationPreference1 || '',
+        preference2: locationPreference2 || 'none',
+        preference3: locationPreference3 || 'none',
+      });
+
+      // Logic: If no preferences saved (new user), start with panel OPEN (Problem FIX)
+      if (!hasInitializedPreferences) {
+        if (!counsellingType && !locationPreference1) {
+          setShowPreferences(true);
+        } else {
+          setShowPreferences(false);
+        }
+        setHasInitializedPreferences(true);
+      }
+    }
+  }, [profileData, hasInitializedPreferences]);
+
+  // Fetch available locations
+  const { data: locationsData, isLoading: locationsLoading } = useQuery<{ locations: string[] }>({
+    queryKey: ['locations'],
+    queryFn: async () => {
+      const response = await fetch('/api/colleges/locations');
+      if (!response.ok) throw new Error('Failed to fetch locations');
+      return response.json();
+    },
+  });
+  const locations = locationsData?.locations || [];
+
+  // Branch options
+  const branches = ['MBBS', 'BDS'];
+
+  // Update preferences mutation
+  const updatePrefsMutation = useMutation({
+    mutationFn: async (updatedPrefs: typeof prefs) => {
+      const resp = await fetch('/api/students/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // Preserve existing academic info from profileData
+          marks: profileData?.student?.marks,
+          rank: profileData?.student?.rank,
+          yearOfPassing: profileData?.student?.yearOfPassing,
+          category: profileData?.student?.category,
+          gender: profileData?.student?.gender,
+          institution: profileData?.student?.institution,
+          domicileState: profileData?.student?.domicileState,
+          referralCode: profileData?.student?.referralCode,
+          // Update values
+          counsellingType: updatedPrefs.counsellingType,
+          preferredBranch: updatedPrefs.preferredBranch,
+          locationPreference1: updatedPrefs.preference1,
+          locationPreference2: updatedPrefs.preference2 === 'none' ? '' : updatedPrefs.preference2,
+          locationPreference3: updatedPrefs.preference3 === 'none' ? '' : updatedPrefs.preference3,
+          isProfileComplete: true,
+        }),
+      });
+      if (!resp.ok) throw new Error('Failed to update preferences');
+      return resp.json();
+    },
+    onSuccess: async () => {
+      // Invalidate both profile and colleges to trigger total re-fetch
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['student-profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['eligible-colleges-direct'] })
+      ]);
+      // Close preferences panel smoothly
+      setShowPreferences(false);
+    },
+    onError: (error) => {
+      setApiError(error instanceof Error ? error.message : 'Failed to update preferences');
+    }
   });
 
   const counsellingType = profileData?.student?.counsellingType || 'all_india';
@@ -143,37 +249,61 @@ export default function StudentResultPage() {
   };
 
   // 3. Fetch results if not in session
-  const { data: fetchedResults, isLoading: isFetchingResults } = useQuery({
-    queryKey: ['eligible-colleges-direct', profileData?.student?.domicileState],
+  const { 
+    data: fetchedResults, 
+    isLoading: isFetchingResults, 
+    refetch: refetchColleges,
+    error: queryError
+  } = useQuery<ResultData>({
+    queryKey: ['eligible-colleges-direct', profileData?.student?.domicileState, profileData?.student?.preferredBranch, profileData?.student?.counsellingType],
     queryFn: async () => {
+      setApiError(null);
+      if (!profileData?.student) throw new Error('Student profile not found');
+      
       const params = new URLSearchParams({
-        domicileState: profileData.student.domicileState,
+        domicileState: profileData.student.domicileState || '',
+        track: 'true', // Increment checks on first view or change
       });
       const resp = await fetch(`/api/colleges/eligible?${params}`);
-      if (!resp.ok) throw new Error('API Failed');
+      if (resp.status === 403) {
+        throw new Error('Maximum college checks reached (10/10). Please contact support to increase your limit.');
+      }
+      if (!resp.ok) throw new Error('Failed to retrieve college predictions.');
       return resp.json();
     },
-    enabled: !!isAuthorized && !!profileData?.student && (!resultData || (resultData.colleges?.length === 0 && (resultData.otherColleges?.length ?? 0) === 0)),
+    enabled: !!isAuthorized && !!profileData?.student,
     staleTime: 60000,
   });
 
+  // Handle Query Errors (v5 replacement for onError)
   useEffect(() => {
-    if (fetchedResults && !resultData) {
-      setResultData(fetchedResults);
+    if (queryError instanceof Error) {
+      setApiError(queryError.message);
     }
-  }, [fetchedResults, resultData]);
+  }, [queryError]);
+
+  useEffect(() => {
+    if (fetchedResults) {
+      setResultData(fetchedResults);
+      // Scroll to top of list area when results update
+      const listElement = document.getElementById('college-list-top');
+      if (listElement) {
+        listElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [fetchedResults]);
 
   const isBusy = authLoading || (isAuthorized && !resultData && (isProfileLoading || isFetchingResults));
 
-  // Redirect if absolutely no data found after loading
+  // Redirect if absolutely no profile found (not just loading)
   useEffect(() => {
-    if (!isBusy && isAuthorized && !resultData && !isFetchingResults && !isProfileLoading) {
+    if (!isBusy && isAuthorized && !profileData?.student && !isProfileLoading) {
       const timer = setTimeout(() => {
-        if (!resultData) router.push('/student/info');
-      }, 5000);
+        router.push('/student/info');
+      }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [isBusy, isAuthorized, resultData, isFetchingResults, isProfileLoading, router]);
+  }, [isBusy, isAuthorized, profileData, isProfileLoading, router]);
 
   if (isBusy) {
     return (
@@ -183,12 +313,12 @@ export default function StudentResultPage() {
     );
   }
 
-  if (!resultData) {
+  if (!resultData && !apiError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mx-auto" />
-          <p className="mt-4 text-slate-500">Retrieving your predictions...</p>
+          <p className="mt-4 text-slate-500 font-medium">Retrieving your predictions...</p>
         </div>
       </div>
     );
@@ -196,7 +326,9 @@ export default function StudentResultPage() {
 
   // Deduplicate and merge colleges
   const uniqueCollegesMap = new Map();
-  [...(resultData.colleges || []), ...(resultData.otherColleges || [])].forEach((c: any) => {
+  const rawColleges = resultData ? [...(resultData.colleges || []), ...(resultData.otherColleges || [])] : [];
+  
+  rawColleges.forEach((c: any) => {
     if (!uniqueCollegesMap.has(c.id)) {
       uniqueCollegesMap.set(c.id, {
         ...c,
@@ -215,7 +347,7 @@ export default function StudentResultPage() {
     return matchesType && matchesState;
   });
 
-  const displayYear = resultData.currentYear || resultData.year || new Date().getFullYear();
+  const displayYear = resultData?.currentYear || resultData?.year || new Date().getFullYear();
 
   // Problem 16: User-friendly category mapping
   const formatCategory = (cat: string): string => {
@@ -250,7 +382,7 @@ export default function StudentResultPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white animate-page">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Title and Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -278,22 +410,178 @@ export default function StudentResultPage() {
           </div>
         </div>
 
-        {/* Tabs — dynamic and responsive */}
-        <div className="flex border w-full sm:w-fit overflow-x-auto no-scrollbar rounded-[8px] p-1 gap-2 mb-6">
-          {tabs.map((tab) => (
-            <button
-              key={tab.value}
-              onClick={() => setActiveTab(tab.value)}
-              className={`px-4 py-2 rounded-[8px] cursor-pointer text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
-                activeTab === tab.value
-                  ? 'bg-linear-to-r from-[#2F129B] to-[#3B82F6] text-white'
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {apiError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-800">Prediction Limit Reached</p>
+              <p className="text-xs text-red-600 mt-1">{apiError}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Dynamic Preferences Form (Problem 12) */}
+        <div className="mb-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300">
+          <button 
+            onClick={() => setShowPreferences(!showPreferences)}
+            className="flex w-full items-center justify-between p-4 px-6 text-left hover:bg-slate-50 transition-colors cursor-pointer z-10 relative"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-indigo-50 p-2 rounded-lg text-indigo-600">
+                <Settings className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-slate-800 font-outfit">Course and Location Preferences</h2>
+                <p className="text-xs text-slate-500">Update these to change your college predictions</p>
+              </div>
+            </div>
+            <div className={`transition-transform duration-300 ${showPreferences ? 'rotate-180' : ''}`}>
+              <ChevronDown className="h-5 w-5 text-slate-400" />
+            </div>
+          </button>
+
+          <div 
+            className={`grid transition-all duration-500 ease-in-out ${showPreferences ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+          >
+            <div className="overflow-hidden">
+              <div className="p-6 px-8 border-t border-slate-100 bg-white space-y-6">
+                <div className="grid sm:grid-cols-2 gap-6">
+                  {/* Counselling Type */}
+                  <div className="space-y-2">
+                    <Label className="text-slate-700">Counselling Type</Label>
+                    <Select 
+                      value={prefs.counsellingType} 
+                      onValueChange={(val) => setPrefs(prev => ({ ...prev, counsellingType: val }))}
+                    >
+                      <SelectTrigger className="h-12 border-slate-200 rounded-xl focus:ring-indigo-500">
+                        <SelectValue placeholder="Select Counselling Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COUNSELLING_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Branch */}
+                  <div className="space-y-2">
+                    <Label className="text-slate-700">Preferred Branch</Label>
+                    <Select 
+                      value={prefs.preferredBranch} 
+                      onValueChange={(val) => setPrefs(prev => ({ ...prev, preferredBranch: val }))}
+                    >
+                      <SelectTrigger className="h-12 border-slate-200 rounded-xl focus:ring-indigo-500">
+                        <SelectValue placeholder="Select Branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {branches.map(b => (
+                          <SelectItem key={b} value={b}>{b}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Locations */}
+                <div className="space-y-3">
+                  <Label className="text-slate-700">Interested Study Locations</Label>
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    <Select value={prefs.preference1} onValueChange={(val) => setPrefs(prev => ({ ...prev, preference1: val }))}>
+                      <SelectTrigger className="h-12 border-slate-200 rounded-xl focus:ring-indigo-500">
+                        <SelectValue placeholder="1st Preference" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations.map(loc => (
+                          <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={prefs.preference2} onValueChange={(val) => setPrefs(prev => ({ ...prev, preference2: val }))}>
+                      <SelectTrigger className="h-12 border-slate-200 rounded-xl focus:ring-indigo-500">
+                        <SelectValue placeholder="2nd Preference" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Not Specified</SelectItem>
+                        {locations.map(loc => (
+                          <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={prefs.preference3} onValueChange={(val) => setPrefs(prev => ({ ...prev, preference3: val }))}>
+                      <SelectTrigger className="h-12 border-slate-200 rounded-xl focus:ring-indigo-500">
+                        <SelectValue placeholder="3rd Preference" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Not Specified</SelectItem>
+                        {locations.map(loc => (
+                          <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Action Button */}
+                <div className="flex justify-end pt-2">
+                  <Button 
+                    onClick={() => updatePrefsMutation.mutate(prefs)}
+                    disabled={updatePrefsMutation.isPending}
+                    className="h-12 bg-linear-to-r from-[#2F129B] to-[#6366F1] rounded-xl px-8 shadow-md hover:shadow-lg transition-all"
+                  >
+                    {updatePrefsMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Updating Predictions...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Update Predictions
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* Tabs — dynamic and responsive */}
+        <div id="college-list-top" className="flex items-center justify-between gap-4 mb-6">
+          <div className="flex border w-full sm:w-fit overflow-x-auto no-scrollbar rounded-[8px] p-1 gap-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                className={`px-4 py-2 rounded-[8px] cursor-pointer text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
+                  activeTab === tab.value
+                    ? 'bg-linear-to-r from-[#2F129B] to-[#3B82F6] text-white'
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-100 rounded-lg shrink-0">
+            <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">Viewing Results For:</span>
+            <span className="text-sm font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+              {profileData?.student?.preferredBranch || 'All'}
+            </span>
+          </div>
+        </div>
+
+        {/* Background loading pulse */}
+        {isFetchingResults && resultData && (
+          <div className="mb-4 flex items-center gap-2 text-indigo-600 animate-pulse">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-xs font-medium">Refreshing predictions...</span>
+          </div>
+        )}
 
         {/* Year label */}
         <p className="text-slate-600 text-sm mb-6">

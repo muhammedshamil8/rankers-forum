@@ -98,7 +98,7 @@ export const INDIAN_STATES = [
 // Business Rules
 // ============================================
 
-export const MAX_COLLEGE_CHECKS = 2;
+export const MAX_COLLEGE_CHECKS = 10;
 export const DEFAULT_MAX_ACTIVE_LEADS = 50;
 
 // ============================================

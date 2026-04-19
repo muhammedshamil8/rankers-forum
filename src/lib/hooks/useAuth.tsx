@@ -58,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(null);
         return data.user;
       } else {
+        // If 401, maybe the cookie isn't ready yet? (Rare race condition fix)
         setUser(null);
         if (response.status !== 401) {
           setError('Failed to fetch user');

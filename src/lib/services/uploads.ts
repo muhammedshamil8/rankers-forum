@@ -6,6 +6,7 @@ import {
   CollegeRankCutoff,
 } from '@/types';
 import { bulkCreateCutoffs, bulkUpsertCutoffs, getCutoffsByYear, syncCourses, syncLocations } from './colleges';
+import { cleanCommas } from '@/lib/utils';
 
 // Expected column headers in the Excel file
 const EXPECTED_COLUMNS = [
@@ -79,6 +80,8 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): { valid: b
   };
 }
 
+
+
 /**
  * Normalize Excel data in memory - takes LAST occurrence for each unique combination
  */
@@ -86,7 +89,8 @@ function normalizeExcelData(rows: any[], year: number): NormalizedCutoff[] {
   const map = new Map<string, NormalizedCutoff>();
 
   for (const row of rows) {
-    const collegeName = (row['College Name'] || row['collegeName'] || '').toString().trim();
+    const rawName = (row['College Name'] || row['collegeName'] || '').toString().trim();
+    const collegeName = cleanCommas(rawName);
     const courseName = (row['Course Name'] || row['courseName'] || '').toString().trim();
     const category = (row['Allotted Category'] || row['category'] || '').toString().trim();
     
@@ -96,8 +100,8 @@ function normalizeExcelData(rows: any[], year: number): NormalizedCutoff[] {
     const key = `${collegeName}|${courseName}|${category}`;
 
     // Always overwrite with later row (last wins)
-    const city = (row['City'] || '').toString().trim();
-    const state = (row['State'] || '').toString().trim();
+    const city = cleanCommas((row['City'] || '').toString());
+    const state = cleanCommas((row['State'] || '').toString());
     
     // Normalize college type based on instructions:
     // 'government' (govt), 'private', 'deemed' (private university)
@@ -114,11 +118,11 @@ function normalizeExcelData(rows: any[], year: number): NormalizedCutoff[] {
     
     map.set(key, {
       collegeName: collegeName,
-      collegeLocation: city ? `${city}, ${state}` : state,
+      collegeLocation: cleanCommas(city ? `${city}, ${state}` : state),
       collegeType: normalizedType,
       quota: (row['Quota'] || '').toString().trim() || '',
-      city: (row['City'] || '').toString().trim() || '',
-      state: (row['State'] || '').toString().trim() || '',
+      city: city,
+      state: state,
       courseName: courseName,
       courseFees: Number(row['Course_fees'] || row['Course Fee'] || 0) || 0,
       category: category,
@@ -321,7 +325,9 @@ export async function processExcelUpload(
     // Build an in-memory Map for existing DB records using a unique key
     const dbMap = new Map<string, CollegeRankCutoff>();
     existingCutoffs.forEach(item => {
-      const key = `${item.collegeName}|${item.courseName}|${item.category}|${item.year}`;
+      // CLEAN the DB name before using it as a key to match against cleaned Excel data
+      const cleanDbName = cleanCommas(item.collegeName);
+      const key = `${cleanDbName}|${item.courseName}|${item.category}|${item.year}`;
       dbMap.set(key, item);
     });
 

@@ -164,8 +164,8 @@ export default function CollegePage() {
                       </td>
                     </tr>
                   ) : (
-                    paginatedColleges.map((college) => (
-                      <tr key={college.id} className="hover:bg-slate-50">
+                    paginatedColleges.map((college, index) => (
+                      <tr key={`${college.id}-${index}`} className="hover:bg-slate-50">
                         <td className="px-6 py-4 text-sm text-slate-900">{college.collegeName}</td>
                         <td className="px-6 py-4 text-sm text-slate-600">{college.category}</td>
                         <td className="px-6 py-4 text-sm text-slate-600">{college.rank}</td>

@@ -31,6 +31,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Upload mutation
   const uploadMutation = useMutation({
@@ -55,8 +56,9 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
       queryClient.invalidateQueries({ queryKey: ['upload-history'] });
       queryClient.invalidateQueries({ queryKey: ['college-years'] });
       queryClient.invalidateQueries({ queryKey: ['colleges', selectedYear] });
-      // Close dialog after successful upload
+      // Reset state and close dialog after successful upload
       setTimeout(() => {
+        setSelectedFile(null);
         onOpenChange(false);
       }, 2000);
     },
@@ -93,7 +95,13 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
       alert('Please upload an Excel file (.xlsx or .xls)');
       return;
     }
-    uploadMutation.mutate(file);
+    setSelectedFile(file);
+  };
+
+  const handleStartUpload = () => {
+    if (selectedFile) {
+      uploadMutation.mutate(selectedFile);
+    }
   };
 
   const handleClose = () => {
@@ -163,6 +171,29 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
                 <p className="text-lg font-medium text-green-900">Upload Successful!</p>
                 <p className="text-sm text-green-700">Processing data in background...</p>
               </div>
+            ) : selectedFile ? (
+              <div className="space-y-4">
+                <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mx-auto">
+                  <FileSpreadsheet className="h-8 w-8 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-lg font-medium text-slate-900">{selectedFile.name}</p>
+                  <p className="text-sm text-slate-500 mt-1">
+                    {(selectedFile.size / 1024).toFixed(1)} KB • Ready to upload
+                  </p>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="mt-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedFile(null);
+                    }}
+                  >
+                    Change file
+                  </Button>
+                </div>
+              </div>
             ) : (
               <div className="space-y-4">
                 <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto">
@@ -214,11 +245,11 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
               Cancel
             </Button>
             <Button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadMutation.isPending}
+              onClick={selectedFile ? handleStartUpload : () => fileInputRef.current?.click()}
+              disabled={uploadMutation.isPending || (!selectedFile && uploadMutation.isSuccess)}
+              className={selectedFile ? "bg-indigo-600 hover:bg-indigo-700 text-white" : ""}
             >
-              {/* <FileSpreadsheet className="h-4 w-4 mr-2" /> */}
-             Upload
+              {uploadMutation.isPending ? "Uploading..." : selectedFile ? "Confirm & Upload" : "Select File"}
             </Button>
           </div>
         </div>

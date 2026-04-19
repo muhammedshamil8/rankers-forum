@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuthActions } from '@/lib/hooks';
+import { useAuthActions, useAuth, getRedirectUrl } from '@/lib/hooks';
 
 const loginSchema = z.object({
   identifier: z.string().min(1, 'Please enter your phone number or email address'),
@@ -84,11 +84,8 @@ export function LoginModal({
       
       // Delay redirection slightly to allow modal closing animation
       setTimeout(() => {
-        if (user.role === 'admin' || user.role === 'super_admin') {
-          router.push('/super-admin/dashboard');
-        } else {
-          onSuccess?.();
-        }
+        const redirectUrl = getRedirectUrl(user);
+        router.push(redirectUrl);
       }, 50);
     } catch {
       // Error is handled by useAuthActions
@@ -108,11 +105,8 @@ export function LoginModal({
 
       // Delay for smoothness
       setTimeout(() => {
-        if (user.role === 'admin' || user.role === 'super_admin') {
-          router.push('/super-admin/dashboard');
-        } else {
-          onSuccess?.();
-        }
+        const redirectUrl = getRedirectUrl(user);
+        router.push(redirectUrl);
       }, 50);
     } catch {
       // Error is handled by useAuthActions

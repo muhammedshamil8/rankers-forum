@@ -296,15 +296,8 @@ export async function getPreviousYearCutoffs(options: {
  */
 export async function getCutoffsByYear(year: number): Promise<CollegeRankCutoff[]> {
   await dbConnect();
-  const docs = await CollegeCutoffModel.find({ year });
-
-  return docs.map(doc => {
-    const obj = doc.toObject();
-    return {
-      id: doc._id.toString(),
-      ...obj
-    } as CollegeRankCutoff;
-  });
+  const docs = await CollegeCutoffModel.find({ year }).lean();
+  return docs as unknown as CollegeRankCutoff[];
 }
 
 /**

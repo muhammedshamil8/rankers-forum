@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
 import { getUserById } from '@/lib/services/users';
 import { getCutoffsByYear, getAvailableYears } from '@/lib/services/colleges';
+import { cleanCommas } from '@/lib/utils';
 
 /**
  * Helper to verify super admin session
@@ -50,10 +51,20 @@ export async function GET(request: NextRequest) {
 
     const cutoffs = await getCutoffsByYear(parseInt(year));
 
+    // Sanitize data for display and ensure id is present
+    const sanitizedCutoffs = (cutoffs || []).map((cutoff: any) => ({
+      ...cutoff,
+      id: cutoff.id || cutoff._id?.toString(),
+      collegeName: cleanCommas(cutoff.collegeName),
+      collegeLocation: cleanCommas(cutoff.collegeLocation),
+      city: cleanCommas(cutoff.city),
+      state: cleanCommas(cutoff.state),
+    }));
+
     return NextResponse.json({
       year: parseInt(year),
-      cutoffs,
-      totalCount: cutoffs.length,
+      cutoffs: sanitizedCutoffs,
+      totalCount: sanitizedCutoffs.length,
     });
   } catch (error) {
     console.error('Get colleges error:', error);

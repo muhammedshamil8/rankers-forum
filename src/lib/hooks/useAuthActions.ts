@@ -92,8 +92,21 @@ export function useAuthActions(): UseAuthActionsReturn {
         throw new Error(errorData.error || 'Registration failed');
       }
 
-      // Then sign in with the credentials
-      await signInWithEmail(data.email, data.password);
+      // sign in with the credentials
+      const credential = await signInWithEmail(data.email, data.password);
+      const idToken = await credential.user.getIdToken();
+
+      // ESTABLISH SESSION EXPLICITLY TO PREVENT 401
+      const loginResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!loginResponse.ok) {
+        throw new Error('Failed to establish session after registration');
+      }
+
       await refreshUser();
       
       // Clear cache for new user session

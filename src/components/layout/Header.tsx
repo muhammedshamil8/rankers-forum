@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/lib/hooks';
+import { useAuth, getRedirectUrl } from '@/lib/hooks';
 import { LoginModal, RegisterModal, ForgotPasswordModal, LogoutModal } from '@/components/modals';
 
 export function Header() {
@@ -33,16 +33,7 @@ export function Header() {
 
   const getDashboardLink = () => {
     if (!user) return '/';
-    switch (user.role) {
-      case 'student':
-        return '/student/info';
-      case 'admin':
-        return '/admin/dashboard';
-      case 'super_admin':
-        return '/super-admin/dashboard';
-      default:
-        return '/';
-    }
+    return getRedirectUrl(user);
   };
 
   return (

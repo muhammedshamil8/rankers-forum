@@ -20,6 +20,7 @@ const superAdminLinks = [
   { href: '/super-admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/super-admin/students', label: 'Students', icon: Users },
   { href: '/super-admin/colleges', label: 'College', icon: Building2 },
+  { href: '/super-admin/referral-codes', label: 'Referral Codes', icon: GraduationCap }, // Using GraduationCap as a temporary suitable icon 
   { href: '/super-admin/admins', label: 'Admin', icon: UserCog },
   { href: '/super-admin/profile', label: 'Profile', icon: UserCircle },
 ];
@@ -40,8 +41,7 @@ export function AdminSidebar({ onLogoutClick }: AdminSidebarProps) {
   const links = user?.role === 'admin' ? adminLinks : superAdminLinks;
 
   return (
-    <aside className="w-64 bg-white text-white flex flex-col
-    shadow-md border-r border-slate-100 fixed inset-y-0 left-0 z-50">
+    <aside className="w-64 bg-white text-white flex flex-col shadow-md border-r border-slate-100 fixed inset-y-0 left-0 z-50">
       {/* Logo */}
       <div className="p-6 ">
         <Image
