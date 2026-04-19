@@ -1,0 +1,20 @@
+,Observed Behaviour,Expected Behaviour,Any other Comments
+My Eligible college List,"--> Click on Rankers Forum Icon
+--> Home page flashes for a second",Navigates to Home Page,
+My Eligible college List,"College Name and Location: Shri Atal Bihari Vajpayee Institute of Medical Science,,Bengaluru
+Bengaluru, Karnataka","After the college name before the city, only one comma to be expected instead of 2",
+Enter your details,Rank ,To be replaced as NEET All India Rank,
+Enter your details,"Please provide marks text area, before enetering the NEET All India Rank",Marks text area to be added,
+Enter your details,Referral Code ,"Not mandatory, should be a drop down menu.",List of referral codes will be provided.
+Enter your details,Institution needs to be replaced by 12th board,12th Board Name,
+Enter your details,Domicile State,"Text Area should display 10 plus years of study, Domicile state should not be mandatory",
+Enter your details,"Under Category only General Merit(GM) or General(GM), OBC, SC, ST and EWS to be displayed in the drop down menu ","Under Category only General Merit(GM) or General(GM), OBC, SC, ST and EWS to be displayed in the drop down menu ",
+Enter your details,"Under Course and Location Preference, Prefereed branch should be MBBS and BDS in the drop down menu","Under Course and Location Preference, Prefereed branch should be MBBS and BDS in the drop down menu",
+Enter your details,Interested Study location -->only one location should be mandatory,Interested Study location -->only one location should be mandatory,
+Enter your details,All the details once entered cannot be changed,Course and Location Preferences changes can be made. ,changes can be made whenever the student needs to look at diiferent college cutoffs/options
+Enter your details,Course and Location Preference should not be present in this page. Should be collected in the next page,Course and Location Preference details to be collected after clicking on view my results,
+Enter your details,Year to be replaced as Passing out year,Year to be replaced as Passing out year,
+Student Profile button on the right top of the screen,Profile Profile,Profile,
+My Eligible College List,Currently the counselling type is not displayed in this page instead its displayed as Government Private Deemed,"-->After selecting counsellling type as State Counselling the type of seats for state counselling colleges should be Govt, Private, Management and NRI.-->After selecting counsellling type as Deemed Counselling the type of seats for deemed counselling colleges should be All India Quota, Deemed/paid seats and NRI.","The type of seats for state counselling and deemed counselling should change accordingly. Clicking on these tabs or seat type(Govt, Private, Management and NRI) the list of colleges with the type of seat selected should be displayed."
+My Eligible College List,Category OPN/GMH/GM......,category to be replaced by allotted category,
+Location/State,General List of locations around used,Location/State details has be taken from the cutoff file provided.  ,the extra locations are not required. the exact locations are provided in the cutoffl list.

@@ -1,0 +1,21 @@
+
+(Report)
+- amount split into (cash and bank)
+- Total (cash and bank) on open date only
+- opening balance ( split bank and cash )
+- closing also (split)
+- back button inside report selected date 
+- Bank wise report
+- committe wise report (separate) 
+- contra form (bank to bank , cash to bank , bank to cash)
+- subtotal (cash and bank)
+- reciept column width decrease
+- date format (dd/mm/yyyy) neat no second 
+- inside date change (select date) box 
+
+(Accounts)
+- new tab contra
+- add benficiary
+- 
+
+export 
