@@ -33,13 +33,19 @@ export default function LandingPage() {
     }
   };
 
+  const handleAuthSuccess = () => {
+    if (user) {
+      router.push(getRedirectUrl(user));
+    } else {
+      // Fallback if user is not immediately available
+      router.push('/student/info');
+    }
+  };
+
   // Redirect logged-in users to their appropriate page
   useEffect(() => {
-    // Commented out to prevent routing to any other page
-    if (!loading && user) {
-      router.push(getRedirectUrl(user));
-    }
-  
+    // Problem 1: We allow logged-in users to see the Home Page if they navigated here (e.g. logo click)
+    // No automatic redirect on mount/user change, only after explicit actions (checked via handleAuthSuccess)
   }, [loading, user, router]);
 
 
@@ -78,6 +84,7 @@ export default function LandingPage() {
             setLoginOpen(false);
             setForgotPasswordOpen(true);
           }}
+          onSuccess={handleAuthSuccess}
         />
 
         <RegisterModal
@@ -87,6 +94,7 @@ export default function LandingPage() {
             setRegisterOpen(false);
             setLoginOpen(true);
           }}
+          onSuccess={handleAuthSuccess}
         />
 
         <ForgotPasswordModal

@@ -116,8 +116,9 @@ const CATEGORY_MAPPING: Record<string, string[] | RegExp> = {
 };
 
 const QUOTA_MAPPING: Record<string, string[]> = {
-  state: ['GOVT', 'PRIV', 'GOVERNMENT', 'PRIVATE'],
-  all_india: ['AIQ', 'GOVT', 'ALL INDIA'],
+  state: ['GOVT', 'PRIV', 'MANAGEMENT', 'NRI', 'GOVERNMENT', 'PRIVATE', 'MGMT'],
+  all_india: ['AIQ', 'GOVT', 'ALL INDIA', 'MANAGEMENT'],
+  deemed: ['AIQ', 'DEEMED', 'PAID', 'NRI', 'ALL INDIA QUOTA', 'MANAGEMENT', 'MNG'],
 };
 
 /**

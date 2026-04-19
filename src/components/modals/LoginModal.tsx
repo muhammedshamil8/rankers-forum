@@ -80,18 +80,16 @@ export function LoginModal({
       
       if (!user) return;
 
-      setIsRedirecting(true);
-      reset();
-
-      // Delay a bit to let the user see the success state
+      onOpenChange(false);
+      
+      // Delay redirection slightly to allow modal closing animation
       setTimeout(() => {
         if (user.role === 'admin' || user.role === 'super_admin') {
           router.push('/super-admin/dashboard');
         } else {
-          onOpenChange(false);
           onSuccess?.();
         }
-      }, 100);
+      }, 50);
     } catch {
       // Error is handled by useAuthActions
     }
@@ -106,16 +104,16 @@ export function LoginModal({
       if (!user) return;
 
       setIsRedirecting(true);
+      onOpenChange(false);
 
-      // Delay a bit for smoothness
+      // Delay for smoothness
       setTimeout(() => {
         if (user.role === 'admin' || user.role === 'super_admin') {
           router.push('/super-admin/dashboard');
         } else {
-          onOpenChange(false);
           onSuccess?.();
         }
-      }, 100);
+      }, 50);
     } catch {
       // Error is handled by useAuthActions
     } finally {
@@ -167,7 +165,7 @@ export function LoginModal({
               <button
                 type="button"
                 onClick={onForgotPasswordClick}
-                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium cursor-pointer"
               >
                 Forgot Password?
               </button>
@@ -176,7 +174,7 @@ export function LoginModal({
 
           <Button
             type="submit"
-            className="w-full h-12 rounded-full"
+            className="w-full h-12 rounded-full cursor-pointer"
             size="lg"
             disabled={loading || isRedirecting}
           >
@@ -210,7 +208,7 @@ export function LoginModal({
           <Button
             type="button"
             variant="outline"
-            className="w-full h-12 rounded-full"
+            className="w-full h-12 rounded-full cursor-pointer"
             size="lg"
             onClick={handleGoogleLogin}
             disabled={googleLoading || isRedirecting}
@@ -247,7 +245,7 @@ export function LoginModal({
             <button
               type="button"
               onClick={onRegisterClick}
-              className="text-indigo-600 hover:text-indigo-700 font-semibold"
+              className="text-indigo-600 hover:text-indigo-700 font-semibold cursor-pointer"
             >
               Register
             </button>

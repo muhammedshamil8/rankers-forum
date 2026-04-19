@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
+      marks,
       rank,
       yearOfPassing,
       category,
@@ -91,11 +92,11 @@ export async function POST(request: NextRequest) {
       locationPreference1,
       locationPreference2,
       locationPreference3,
+      referralCode,
     } = body;
 
-    // Validate required fields
-    if (!rank || !yearOfPassing || !category || !gender || !institution ||
-      !domicileState || !counsellingType || !preferredBranch) {
+    // Validate required fields (Problem 7: domicileState now optional)
+    if (!rank || !yearOfPassing || !category || !gender || !counsellingType || !preferredBranch) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -105,34 +106,38 @@ export async function POST(request: NextRequest) {
       // Students can only update certain fields, and only once (per UI warning)
       // For now, allow updates but in production might want to restrict this
       await updateStudent(uid, {
+        marks: marks ? parseInt(marks) : 0,
         rank,
         yearOfPassing,
         category,
         gender,
-        institution,
-        domicileState,
+        institution: institution || '',
+        domicileState: domicileState || '',
         counsellingType,
         preferredBranch,
         locationPreference1: locationPreference1 || '',
         locationPreference2: locationPreference2 || '',
         locationPreference3: locationPreference3 || '',
+        referralCode: referralCode || '',
       });
 
       return NextResponse.json({ success: true, message: 'Profile updated' });
     }
 
     const studentInput: CreateStudentInput = {
+      marks: marks ? parseInt(marks) : 0,
       rank,
       yearOfPassing,
       category,
       gender,
-      institution,
-      domicileState,
+      institution: institution || '',
+      domicileState: domicileState || '',
       counsellingType,
       preferredBranch,
       locationPreference1: locationPreference1 || '',
       locationPreference2: locationPreference2 || '',
       locationPreference3: locationPreference3 || '',
+      referralCode: referralCode || '',
     };
 
     const student = await createStudent(uid, studentInput);

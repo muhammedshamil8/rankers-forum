@@ -56,7 +56,7 @@ export default function StudentResultPage() {
   const { isAuthorized } = useRequireAuth(['student']);
 
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'government' | 'private' | 'deemed'>('government');
+  const [activeTab, setActiveTab] = useState('government');
   const [stateFilter, setStateFilter] = useState('all');
   const [resultData, setResultData] = useState<ResultData | null>(null);
   const [expandedCollege, setExpandedCollege] = useState<string | null>(null);
@@ -88,6 +88,59 @@ export default function StudentResultPage() {
     },
     enabled: !!isAuthorized,
   });
+
+  const counsellingType = profileData?.student?.counsellingType || 'all_india';
+
+  // Determine tabs based on counselling type (Problem 15)
+  const getTabs = () => {
+    if (counsellingType === 'state') {
+      return [
+        { value: 'government', label: 'Govt' },
+        { value: 'private', label: 'Private' },
+        { value: 'management', label: 'Management' },
+        { value: 'nri', label: 'NRI' },
+      ];
+    } else if (counsellingType === 'deemed') {
+      return [
+        { value: 'aiq', label: 'All India Quota' },
+        { value: 'paid', label: 'Deemed/paid seats' },
+        { value: 'nri', label: 'NRI' },
+      ];
+    } else {
+      // All India Counselling (Default)
+      return [
+        { value: 'government', label: 'Government' },
+        { value: 'private', label: 'Private' },
+        { value: 'deemed', label: 'Deemed' },
+        { value: 'nri', label: 'NRI' },
+      ];
+    }
+  };
+
+  const tabs = getTabs();
+
+  // Set initial tab if current one isn't in new tabs list
+  useEffect(() => {
+    if (tabs.length > 0 && !tabs.find(t => t.value === activeTab)) {
+      setActiveTab(tabs[0].value);
+    }
+  }, [counsellingType, tabs, activeTab]);
+
+  // Normalize seat type for filtering
+  const normalizeSeatType = (quota: string, collegeType: string): string => {
+    const q = (quota || '').toLowerCase();
+    const t = (collegeType || '').toLowerCase();
+    
+    if (q.includes('nri')) return 'nri';
+    if (q.includes('mgmt') || q.includes('management') || q.includes('mng')) return 'management';
+    if (q.includes('paid') || (t.includes('deemed') && q.includes('deemed'))) return 'paid';
+    if (q.includes('aiq') || q.includes('all india')) return 'aiq';
+    if (q.includes('govt') || t.includes('government')) return 'government';
+    if (q.includes('priv') || t.includes('private')) return 'private';
+    if (t.includes('deemed')) return 'paid';
+    
+    return t || 'government';
+  };
 
   // 3. Fetch results if not in session
   const { data: fetchedResults, isLoading: isFetchingResults } = useQuery({
@@ -156,13 +209,32 @@ export default function StudentResultPage() {
   const allColleges = Array.from(uniqueCollegesMap.values()) as College[];
 
   const filteredColleges = allColleges.filter(college => {
-    const normalized = normalizeCollegeType(college.collegeType);
+    const normalized = normalizeSeatType(college.quota || '', college.collegeType);
     const matchesType = normalized === activeTab;
     const matchesState = stateFilter === 'all' || (college.collegeLocation && college.collegeLocation.includes(stateFilter));
     return matchesType && matchesState;
   });
 
   const displayYear = resultData.currentYear || resultData.year || new Date().getFullYear();
+
+  // Problem 16: User-friendly category mapping
+  const formatCategory = (cat: string): string => {
+    if (!cat) return 'N/A';
+    const c = cat.toUpperCase();
+    const mappings: Record<string, string> = {
+      'GM': 'General Merit',
+      'GMH': 'General Merit (Hyd-Kar)',
+      'OPN': 'Open',
+      'SC': 'Scheduled Caste',
+      'ST': 'Scheduled Tribe',
+      'OBC': 'Other Backward Class',
+      'EWS': 'Economically Weaker Section',
+      'AIQ': 'All India Quota',
+      'MNG': 'Management',
+      'NRI': 'Non-Resident Indian'
+    };
+    return mappings[c] || c;
+  };
 
   const getChanceBadge = (chance: string) => {
     switch (chance) {
@@ -206,20 +278,16 @@ export default function StudentResultPage() {
           </div>
         </div>
 
-        {/* Tabs — gradient style matching previous-year page */}
-        <div className="flex border w-fit rounded-[8px] p-1 gap-2 mb-6">
-          {[
-            { value: 'government', label: 'Government' },
-            { value: 'private', label: 'Private' },
-            { value: 'deemed', label: 'Deemed' },
-          ].map((tab) => (
+        {/* Tabs — dynamic and responsive */}
+        <div className="flex border w-full sm:w-fit overflow-x-auto no-scrollbar rounded-[8px] p-1 gap-2 mb-6">
+          {tabs.map((tab) => (
             <button
               key={tab.value}
-              onClick={() => setActiveTab(tab.value as typeof activeTab)}
-              className={`px-5 py-2 rounded-[8px] cursor-pointer text-xs md:text-sm font-medium transition-colors ${
+              onClick={() => setActiveTab(tab.value)}
+              className={`px-4 py-2 rounded-[8px] cursor-pointer text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.value
                   ? 'bg-linear-to-r from-[#2F129B] to-[#3B82F6] text-white'
-                  : 'text-slate-600 hover:bg-white'
+                  : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
               {tab.label}
@@ -234,7 +302,7 @@ export default function StudentResultPage() {
 
         {/* College List */}
         {filteredColleges.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-4">
             {filteredColleges.map((college) => (
               <div
                 key={college.id}
@@ -245,66 +313,52 @@ export default function StudentResultPage() {
                   {/* College Info */}
                   <div className="flex-1 flex justify-between h-full">
                     <div className="flex flex-col justify-center">
-                      <h3 className="font-semibold text-[#4B5563] text-sm">{college.collegeName}</h3>
-                      <p className="text-[#4B5563] text-sm">{college.collegeLocation}</p>
+                      <h3 className="font-semibold text-[#4B5563] text-sm">{college.collegeName?.replace(/,,/g, ',')}</h3>
+                      <p className="text-[#4B5563] text-sm">{college.collegeLocation?.replace(/,,/g, ',')}</p>
                     </div>
                     {/* Actions — mobile */}
                     <div className="md:hidden flex flex-col items-center gap-2 ml-6">
                       {getChanceBadge(college.chance)}
-                      <button
-                        onClick={() => setExpandedCollege(expandedCollege === college.id ? null : college.id)}
-                        className="flex items-center gap-1 rounded-[8px] cursor-pointer py-1 px-2 border-2 border-[#3B82F6]/80 text-xs text-indigo-600 hover:text-indigo-700"
-                      >
-                        <Image src="/fileIcon.svg" alt="fileIcon" width={20} height={20} />
-                        View Details
-                      </button>
                     </div>
                   </div>
 
                   <div className="flex items-center h-full justify-between">
                     {/* Details Grid */}
-                    <div className="h-full grid grid-cols-4 gap-1 md:gap-3 text-center">
+                    <div className="h-full grid grid-cols-4 gap-1 md:gap-3 text-center flex-1">
                       <div className="bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full">
-                        <p className="text-[11px] md:text-xs text-slate-400 mb-1">Category</p>
-                        <p className="text-sm font-medium text-slate-700">{college.category?.toUpperCase() || 'N/A'}</p>
+                        <p className="text-[10px] md:text-xs text-slate-400 mb-1">allotted category</p>
+                        <p className="text-[12px] md:text-sm font-medium text-slate-700">{formatCategory(college.category || '')}</p>
                       </div>
                       <div className="bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full">
-                        <p className="text-[11px] md:text-xs text-slate-400 mb-1">Quota</p>
-                        <p className="text-sm font-medium text-slate-700">
+                        <p className="text-[10px] md:text-xs text-slate-400 mb-1">Quota</p>
+                        <p className="text-[12px] md:text-sm font-medium text-slate-700">
                           {college.quota === 'all_india' ? 'All India' : (college.quota || '').replace('_', ' ') || 'All India'}
                         </p>
                       </div>
                       <div className="bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full">
-                        <p className="text-[11px] md:text-xs text-slate-400 mb-1">Closing Rank</p>
-                        <p className="text-sm font-medium text-slate-700">{college.rank?.toLocaleString() || 'N/A'}</p>
+                        <p className="text-[10px] md:text-xs text-slate-400 mb-1">Closing Rank</p>
+                        <p className="text-[12px] md:text-sm font-medium text-slate-700">{college.rank?.toLocaleString() || 'N/A'}</p>
                       </div>
                       <div className="bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full">
-                        <p className="text-[11px] md:text-xs text-slate-400 mb-1">Course</p>
-                        <p className="text-sm font-medium text-slate-700">{(college.courseName || '').toUpperCase()}</p>
+                        <p className="text-[10px] md:text-xs text-slate-400 mb-1">Course</p>
+                        <p className="text-[12px] md:text-sm font-medium text-slate-700">{(college.courseName || '').toUpperCase()}</p>
                       </div>
                     </div>
 
                     {/* Actions — desktop */}
                     <div className="hidden md:flex flex-col items-center gap-2 ml-6">
                       {getChanceBadge(college.chance)}
-                      {/* <button
-                        onClick={() => setExpandedCollege(expandedCollege === college.id ? null : college.id)}
-                        className="flex items-center gap-1 rounded-[8px] cursor-pointer py-1 px-2 border-2 border-[#3B82F6]/80 text-xs text-indigo-600 hover:text-indigo-700"
-                      >
-                        <Image src="/fileIcon.svg" alt="fileIcon" width={20} height={20} />
-                        View Details
-                      </button> */}
                     </div>
                   </div>
                 </div>
 
-                {/* Expanded Details */}
+                {/* Expanded Details - optional for future details if needed */}
                 {expandedCollege === college.id && (
                   <div className="border-t border-slate-100 p-5 bg-slate-50">
                     <div className="grid sm:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <p className="text-slate-500">Category</p>
-                        <p className="font-medium">{college.category?.toUpperCase() || 'N/A'}</p>
+                        <p className="text-slate-500">allotted category</p>
+                        <p className="font-medium">{formatCategory(college.category || '')}</p>
                       </div>
                       <div>
                         <p className="text-slate-500">Chance</p>

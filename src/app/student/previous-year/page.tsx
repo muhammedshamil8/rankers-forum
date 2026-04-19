@@ -227,8 +227,8 @@ export default function PreviousYearPage() {
                         <div className="flex-1 flex justify-between  h-full ">
                           <div className='flex flex-col justify-center'>
 
-                            <h3 className="font-semibold text-[#4B5563] text-sm">{college.collegeName}</h3>
-                            <p className="text-[#4B5563] text-sm">{college.collegeLocation}</p>
+                            <h3 className="font-semibold text-[#4B5563] text-sm">{college.collegeName?.replace(/,,/g, ',')}</h3>
+                            <p className="text-[#4B5563] text-sm">{college.collegeLocation?.replace(/,,/g, ',')}</p>
                           </div>
                           {/* Actions */}
                           <div className="md:hidden flex flex-col items-center gap-2 ml-6">

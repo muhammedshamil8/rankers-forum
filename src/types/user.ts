@@ -55,9 +55,10 @@ export interface Student {
   preferredBranch: string;
   locationPreference1: string;
   locationPreference2: string;
-  locationPreference3: string;
   checksUsed: number;
   isProfileComplete: boolean;
+  marks: number;
+  referralCode: string;
   createdAt: FirestoreTimestamp;
   updatedAt: FirestoreTimestamp;
 }
@@ -71,9 +72,9 @@ export interface CreateStudentInput {
   domicileState: string;
   counsellingType: string;
   preferredBranch: string;
-  locationPreference1: string;
-  locationPreference2: string;
   locationPreference3: string;
+  marks?: number;
+  referralCode?: string;
 }
 
 // ============================================

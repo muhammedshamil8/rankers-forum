@@ -7,6 +7,7 @@ import * as Yup from 'yup';
 import { Loader2, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -16,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useAuth, useRequireAuth } from '@/lib/hooks';
+import { useAuth, useRequireAuth, getRedirectUrl } from '@/lib/hooks';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -28,24 +29,33 @@ import {
 } from '@/lib/constants';
 import { LogoutModal } from '@/components/modals';
 
-// Validation schema using Yup
-const studentInfoSchema = Yup.object({
+// Validation schemas for each step
+const basicDetailsSchema = Yup.object({
+  marks: Yup.number()
+    .typeError('Marks must be a number')
+    .min(0, 'Minimum marks is 0')
+    .max(720, 'Maximum marks is 720')
+    .required('Marks is required'),
   rank: Yup.string()
-    .required('Rank is required')
+    .required('NEET All India Rank is required')
     .matches(/^[0-9]+$/, 'Rank must be a valid number'),
   institution: Yup.string(),
-  year: Yup.string().required('Year is required'),
-  domicileState: Yup.string().required('Domicile state is required'),
+  year: Yup.string().required('Passing out year is required'),
+  domicileState: Yup.string(),
   category: Yup.string().required('Category is required'),
   gender: Yup.string().required('Gender is required'),
+  referralCode: Yup.string(),
+  confirmAccuracy: Yup.boolean()
+    .oneOf([true], 'Please confirm the information is accurate')
+    .required('Please confirm the information is accurate'),
+});
+
+const preferencesSchema = Yup.object({
   counsellingType: Yup.string().required('Counselling type is required'),
   preferredBranch: Yup.string().required('Preferred branch is required'),
   preference1: Yup.string().required('1st preference is required'),
   preference2: Yup.string(),
   preference3: Yup.string(),
-  confirmAccuracy: Yup.boolean()
-    .oneOf([true], 'Please confirm the information is accurate')
-    .required('Please confirm the information is accurate'),
 });
 
 export default function StudentInfoPage() {
@@ -54,6 +64,7 @@ export default function StudentInfoPage() {
   const { isAuthorized } = useRequireAuth(['student']);
   const queryClient = useQueryClient();
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   // Refs for each field to enable scrolling
   const fieldRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -92,9 +103,30 @@ export default function StudentInfoPage() {
       return response.json();
     },
   });
-  const courses = coursesData?.courses || [];
+  
+  // Problem 5: Fetch referral codes
+  const { data: referralCodesData } = useQuery<{ codes: { code: string, description: string }[] }>({
+    queryKey: ['referral-codes'],
+    queryFn: async () => {
+      const response = await fetch('/api/referral-codes');
+      if (!response.ok) return { codes: [] };
+      return response.json();
+    },
+  });
+  const referralCodes = referralCodesData?.codes || [];
+  
+  // Problem 9: Static branch options
+  const courses = ['MBBS', 'BDS'];
+  
   const student = profileData?.student;
   const profileIsComplete = !!student && (student.rank > 0 || student.isProfileComplete);
+
+  // Set initial step based on profile completion
+  useEffect(() => {
+    if (profileIsComplete) {
+      setCurrentStep(2);
+    }
+  }, [profileIsComplete]);
 
   const submitMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -103,17 +135,21 @@ export default function StudentInfoPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          marks: parseInt(data.marks),
           rank: parseInt(data.rank),
           yearOfPassing: parseInt(data.year),
           category: data.category,
           gender: data.gender,
           institution: data.institution || '',
-          domicileState: data.domicileState,
+          domicileState: data.domicileState || '',
           counsellingType: data.counsellingType,
           preferredBranch: data.preferredBranch,
           locationPreference1: data.preference1,
-          locationPreference2: data.preference2,
-          locationPreference3: data.preference3,
+          locationPreference2: data.preference2 === 'none' ? '' : data.preference2,
+          locationPreference3: data.preference3 === 'none' ? '' : data.preference3,
+          referralCode: data.referralCode === 'none' ? '' : data.referralCode || '',
+          // Ensure isProfileComplete is set to true on first save
+          isProfileComplete: true,
         }),
       });
 
@@ -123,6 +159,7 @@ export default function StudentInfoPage() {
       }
 
       // Then get eligible colleges — track=true increments checksUsed and creates lead
+      // Problem 12: results are only viewed after specifically requesting them
       const params = new URLSearchParams({
         domicileState: data.domicileState,
         track: 'true',
@@ -149,6 +186,20 @@ export default function StudentInfoPage() {
     },
   });
 
+  // Problem 1: Handle redirection explicitly after login/register
+  const handleAuthSuccess = () => {
+    if (user) {
+      router.push(getRedirectUrl(user));
+    } else {
+      // If user is not yet available in the hook, wait or refresh
+       refreshUser().then((updatedUser) => {
+        if (updatedUser) {
+          router.push(getRedirectUrl(updatedUser));
+        }
+      });
+    }
+  };
+
   // Helper to get labels for values
   const getCategoryLabel = (value: string) => NEET_CATEGORIES.find(c => c.value === value)?.label || value;
   const getGenderLabel = (value: string) => GENDERS.find(g => g.value === value)?.label || value;
@@ -157,6 +208,7 @@ export default function StudentInfoPage() {
   // Formik setup
   const formik = useFormik({
     initialValues: {
+      marks: student?.marks || '',
       rank: student?.rank?.toString() || '',
       institution: student?.institution || '',
       year: student?.yearOfPassing?.toString() || currentYear.toString(),
@@ -166,16 +218,25 @@ export default function StudentInfoPage() {
       counsellingType: student?.counsellingType || '',
       preferredBranch: student?.preferredBranch || '',
       preference1: student?.locationPreference1 || '',
-      preference2: student?.locationPreference2 || '',
-      preference3: student?.locationPreference3 || '',
+      preference2: student?.locationPreference2 && student.locationPreference2 !== '' ? student.locationPreference2 : 'none',
+      preference3: student?.locationPreference3 && student.locationPreference3 !== '' ? student.locationPreference3 : 'none',
+      referralCode: student?.referralCode || 'none',
       confirmAccuracy: profileIsComplete ? true : false,
     },
     enableReinitialize: true, // re-populate when profileData loads
-    validationSchema: studentInfoSchema,
+    validationSchema: currentStep === 1 ? basicDetailsSchema : preferencesSchema,
     validateOnChange: true,
     validateOnBlur: true,
-    onSubmit: (values) => {
-      submitMutation.mutate(values);
+    onSubmit: async (values) => {
+      if (currentStep === 1) {
+        // Validation for step 1 is handled by validationSchema
+        // Move to step 2 as per Problem 12: results trigger preferences collection
+        setCurrentStep(2);
+        // Scroll to top to see preferences
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        submitMutation.mutate(values);
+      }
     },
   });
 
@@ -224,13 +285,24 @@ export default function StudentInfoPage() {
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-[#1E1E1E]">Enter Your Details</h1>
           {profileIsComplete ? (
-            <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <svg className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-              <p className="text-sm text-blue-700">
-                Your details have been saved and <strong>cannot be changed</strong>. View your college predictions below.
-              </p>
+            <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-[#E7F0FF] border border-[#B8D4FF] rounded-xl">
+              <div className="flex items-start gap-2">
+                <svg className="h-5 w-5 text-[#2F129B] mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <p className="text-sm text-[#2F129B]">
+                  Your basic details are saved and <strong>cannot be changed</strong>. You can still modify your <strong>Course and Location preferences</strong> below, or jump straight to your results.
+                </p>
+              </div>
+              <Button 
+                type="button"
+                onClick={() => router.push('/student/result')}
+                variant="outline"
+                className="bg-white border-[#2F129B] text-[#2F129B] hover:bg-indigo-50 shrink-0"
+              >
+                View My Results
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
           ) : (
             <p className="text-amber-600 flex items-center gap-2 mt-2 text-sm">
@@ -247,17 +319,66 @@ export default function StudentInfoPage() {
             </div>
           )}
 
-          {/* Basic and Academic Details */}
-          <section>
-            <h2 className="text-lg font-medium text-[#2F129B] mb-6">Basic and Academic Details</h2>
+          {/* Stepper Indicator - Always show for context */}
+          <div className="flex items-center gap-4 mb-8">
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all cursor-pointer ${currentStep === 1 ? 'bg-[#2F129B] border-[#2F129B] text-white' : 'border-[#2F129B] text-[#2F129B]'}`} onClick={() => setCurrentStep(1)}>1</div>
+            <div className="h-[2px] w-12 bg-slate-200"></div>
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all cursor-pointer ${currentStep === 2 ? 'bg-[#2F129B] border-[#2F129B] text-white' : 'border-slate-300 text-slate-400'}`} onClick={() => { if (profileIsComplete || formik.isValid) setCurrentStep(2); }}>2</div>
+          </div>
+
+          {currentStep === 1 && (
+            /* Step 1: Basic and Academic Details */
+            <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-lg font-medium text-[#2F129B] ${profileIsComplete ? 'flex items-center gap-2' : ''}`}>
+                {profileIsComplete ? (
+                  <>
+                    <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    Basic and Academic Details (Locked)
+                  </>
+                ) : (
+                  "Basic and Academic Details"
+                )}
+              </h2>
+            </div>
 
             <div className="grid md:grid-cols-2 gap-4">
-              {/* Rank Field */}
+              {/* Marks Field - Problem 4: Textarea required */}
+              <div
+                className="space-y-2 transition-all duration-200 rounded-lg p-2 -m-2"
+                ref={(el) => { fieldRefs.current['marks'] = el; }}
+              >
+                <Label>Marks <span className="text-red-500">*</span></Label>
+                {isProfileLoading ? (
+                  <Skeleton className="h-12 w-full" />
+                ) : profileIsComplete ? (
+                  <div className="min-h-[80px] w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 cursor-not-allowed">
+                    {formik.values.marks}
+                  </div>
+                ) : (
+                  <Textarea
+                    name="marks"
+                    placeholder="Enter your marks"
+                    className={`min-h-[80px] resize-none ${formik.touched.marks && formik.errors.marks ? 'border-red-500' : ''}`}
+                    {...formik.getFieldProps('marks')}
+                  />
+                )}
+                {formik.touched.marks && formik.errors.marks && (
+                  <p className="text-sm text-red-500 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    {String(formik.errors.marks)}
+                  </p>
+                )}
+              </div>
+
+              {/* Rank Field - Problem 3 */}
               <div
                 className="space-y-2 transition-all duration-200 rounded-lg p-2 -m-2"
                 ref={(el) => { fieldRefs.current['rank'] = el; }}
               >
-                <Label htmlFor="rank">Rank <span className="text-red-500">*</span></Label>
+                <Label htmlFor="rank">NEET All India Rank <span className="text-red-500">*</span></Label>
                 {isProfileLoading ? (
                   <Skeleton className="h-12 w-full" />
                 ) : (
@@ -278,19 +399,19 @@ export default function StudentInfoPage() {
                 )}
               </div>
 
-              {/* Institution Field */}
+              {/* Institution Field - Problem 6 */}
               <div
                 className="space-y-2 transition-all duration-200 rounded-lg p-2 -m-2"
                 ref={(el) => { fieldRefs.current['institution'] = el; }}
               >
-                <Label htmlFor="institution">Institution</Label>
+                <Label htmlFor="institution">12th Board Name</Label>
                 {isProfileLoading ? (
                   <Skeleton className="h-12 w-full" />
                 ) : (
                   <Input
                     id="institution"
                     name="institution"
-                    placeholder="Enter the Institution"
+                    placeholder="Enter the 12th Board Name"
                     className={`h-12 ${profileIsComplete ? 'bg-slate-50 cursor-not-allowed opacity-70' : ''}`}
                     value={formik.values.institution}
                     onChange={formik.handleChange}
@@ -305,7 +426,7 @@ export default function StudentInfoPage() {
                 className="space-y-2 transition-all duration-200 rounded-lg p-2 -m-2"
                 ref={(el) => { fieldRefs.current['year'] = el; }}
               >
-                <Label>Year <span className="text-red-500">*</span></Label>
+                <Label>Passing out year <span className="text-red-500">*</span></Label>
                 {isProfileLoading ? (
                   <Skeleton className="h-12 w-full" />
                 ) : profileIsComplete ? (
@@ -339,12 +460,12 @@ export default function StudentInfoPage() {
                 )}
               </div>
 
-              {/* Domicile State Field */}
+              {/* Domicile State Field - Problem 7 */}
               <div
                 className="space-y-2 transition-all duration-200 rounded-lg p-2 -m-2"
                 ref={(el) => { fieldRefs.current['domicileState'] = el; }}
               >
-                <Label>Domicile State <span className="text-red-500">*</span></Label>
+                <Label>Domicile State</Label>
                 {isProfileLoading ? (
                   <Skeleton className="h-12 w-full" />
                 ) : profileIsComplete ? (
@@ -369,6 +490,9 @@ export default function StudentInfoPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                )}
+                {!profileIsComplete && (
+                   <p className="text-xs text-slate-500 italic">10 plus years of study (Optional)</p>
                 )}
                 {formik.touched.domicileState && formik.errors.domicileState && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
@@ -455,12 +579,74 @@ export default function StudentInfoPage() {
                   </p>
                 )}
               </div>
-            </div>
-          </section>
 
-          {/* Course and Location Preference */}
+              {/* Referral Code Field - Problem 5 */}
+              <div
+                className="space-y-2 transition-all duration-200 rounded-lg p-2 -m-2"
+                ref={(el) => { fieldRefs.current['referralCode'] = el; }}
+              >
+                <Label>Referral Code</Label>
+                {isProfileLoading ? (
+                  <Skeleton className="h-12 w-full" />
+                ) : profileIsComplete ? (
+                  <Input
+                    value={formik.values.referralCode || 'None'}
+                    readOnly
+                    className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
+                  />
+                ) : (
+                  <Select
+                    value={formik.values.referralCode}
+                    onValueChange={(value) => formik.setFieldValue('referralCode', value)}
+                  >
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Select Referral Code (Optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {referralCodes.map((ref) => (
+                        <SelectItem key={ref.code} value={ref.code}>
+                          {ref.code} {ref.description ? `- ${ref.description}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </div>
+
+            {!profileIsComplete && (
+              <div
+                className="mt-8 space-y-2 transition-all duration-200 rounded-lg p-2 -m-2"
+                ref={(el) => { fieldRefs.current['confirmAccuracy'] = el; }}
+              >
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="confirmAccuracy"
+                    checked={formik.values.confirmAccuracy}
+                    onCheckedChange={(checked) => formik.setFieldValue('confirmAccuracy', checked === true)}
+                  />
+                  <Label htmlFor="confirmAccuracy" className="text-sm text-slate-600 leading-relaxed cursor-pointer">
+                    I confirm that all the information provided is accurate and final. I agree to proceed with the entered details. <span className="text-red-500">*</span>
+                  </Label>
+                </div>
+                {formik.touched.confirmAccuracy && formik.errors.confirmAccuracy && (
+                  <p className="text-sm text-red-500 flex items-center gap-1 ml-8">
+                    <AlertTriangle className="h-3 w-3" />
+                    {String(formik.errors.confirmAccuracy)}
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+          )}
+
+          {currentStep === 2 && (
+          /* Step 2: Course and Location Preference */
           <section>
-            <h2 className="text-lg font-semibold text-[#2F129B] mb-6">Course and Location Preference</h2>
+            <h2 className="text-lg font-semibold text-[#2F129B] mb-6">
+              {profileIsComplete ? "Update Your Preferences" : "Course and Location Preference"}
+            </h2>
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Counselling Type Field */}
@@ -471,12 +657,6 @@ export default function StudentInfoPage() {
                 <Label>Counselling Type <span className="text-red-500">*</span></Label>
                 {isProfileLoading ? (
                   <Skeleton className="h-12 w-full" />
-                ) : profileIsComplete ? (
-                  <Input
-                    value={getCounsellingLabel(formik.values.counsellingType)}
-                    readOnly
-                    className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
-                  />
                 ) : (
                   <Select
                     value={formik.values.counsellingType}
@@ -510,12 +690,6 @@ export default function StudentInfoPage() {
                 <Label>Preferred Branch <span className="text-red-500">*</span></Label>
                 {isProfileLoading ? (
                   <Skeleton className="h-12 w-full" />
-                ) : profileIsComplete ? (
-                  <Input
-                    value={formik.values.preferredBranch}
-                    readOnly
-                    className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
-                  />
                 ) : (
                   <Select
                     value={formik.values.preferredBranch}
@@ -550,7 +724,7 @@ export default function StudentInfoPage() {
 
             <div className="mt-6">
               <Label className="mb-3 block">
-                Interested Study Location ( Select 3 locations according to your preference )
+                Interested Study Location ( 1st preference is mandatory )
               </Label>
               <div className="grid md:grid-cols-3 gap-4">
                 {/* Preference 1 */}
@@ -560,12 +734,6 @@ export default function StudentInfoPage() {
                 >
                   {isProfileLoading ? (
                     <Skeleton className="h-12 w-full" />
-                  ) : profileIsComplete ? (
-                    <Input
-                      value={formik.values.preference1}
-                      readOnly
-                      className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
-                    />
                   ) : (
                     <Select
                       value={formik.values.preference1}
@@ -597,25 +765,19 @@ export default function StudentInfoPage() {
                   )}
                 </div>
 
-                {/* Preference 2 */}
                 <div className="space-y-2">
                   {isProfileLoading ? (
                     <Skeleton className="h-12 w-full" />
-                  ) : profileIsComplete ? (
-                    <Input
-                      value={formik.values.preference2}
-                      readOnly
-                      className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
-                    />
                   ) : (
                     <Select
                       value={formik.values.preference2}
                       onValueChange={(value) => formik.setFieldValue('preference2', value)}
                     >
                       <SelectTrigger className="h-12">
-                        <SelectValue placeholder="2nd Preference" />
+                        <SelectValue placeholder="2nd Preference (Optional)" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">Not Specified</SelectItem>
                         {locationsLoading ? (
                           <SelectItem value="loading" disabled>Loading...</SelectItem>
                         ) : locations.length > 0 ? (
@@ -636,21 +798,16 @@ export default function StudentInfoPage() {
                 <div className="space-y-2">
                   {isProfileLoading ? (
                     <Skeleton className="h-12 w-full" />
-                  ) : profileIsComplete ? (
-                    <Input
-                      value={formik.values.preference3}
-                      readOnly
-                      className="h-12 bg-slate-50 cursor-not-allowed opacity-100 font-medium border-slate-200"
-                    />
                   ) : (
                     <Select
                       value={formik.values.preference3}
                       onValueChange={(value) => formik.setFieldValue('preference3', value)}
                     >
                       <SelectTrigger className="h-12">
-                        <SelectValue placeholder="3rd Preference" />
+                        <SelectValue placeholder="3rd Preference (Optional)" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="none">Not Specified</SelectItem>
                         {locationsLoading ? (
                           <SelectItem value="loading" disabled>Loading...</SelectItem>
                         ) : locations.length > 0 ? (
@@ -669,63 +826,48 @@ export default function StudentInfoPage() {
               </div>
             </div>
           </section>
-
-          {!profileIsComplete && (
-            <div
-              className="space-y-2 transition-all duration-200 rounded-lg p-2 -m-2"
-              ref={(el) => { fieldRefs.current['confirmAccuracy'] = el; }}
-            >
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="confirmAccuracy"
-                  checked={formik.values.confirmAccuracy}
-                  onCheckedChange={(checked) => formik.setFieldValue('confirmAccuracy', checked === true)}
-                />
-                <Label htmlFor="confirmAccuracy" className="text-sm text-slate-600 leading-relaxed cursor-pointer">
-                  I confirm that all the information provided is accurate and final. I agree to proceed with the entered details. <span className="text-red-500">*</span>
-                </Label>
-              </div>
-              {formik.touched.confirmAccuracy && formik.errors.confirmAccuracy && (
-                <p className="text-sm text-red-500 flex items-center gap-1 ml-8">
-                  <AlertTriangle className="h-3 w-3" />
-                  {String(formik.errors.confirmAccuracy)}
-                </p>
-              )}
-            </div>
           )}
 
-          {/* Submit / View Results Button */}
-          <div className="flex justify-center pt-4">
-            {profileIsComplete ? (
-              <Button
+          {/* Navigation Buttons */}
+          <div className="flex justify-center gap-4 pt-4">
+            {currentStep === 2 && (
+               <Button
                 type="button"
+                variant="outline"
                 size="lg"
-                className="h-14 px-12 bg-gradient-to-r from-[#2F129B] to-[#6366F1] rounded-full font-normal text-base hover:shadow-lg transition-all"
-                onClick={() => router.push('/student/result')}
+                className="h-14 px-8 rounded-full font-normal text-base"
+                onClick={() => {
+                  setCurrentStep(1);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
               >
-                View My Results
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            ) : (
-              <Button
-                type="submit"
-                size="lg"
-                className="h-14 px-12 bg-gradient-to-r from-[#2F129B] to-[#6366F1] rounded-full font-normal text-base hover:shadow-lg transition-all"
-                disabled={submitMutation.isPending || checksRemaining <= 0}
-              >
-                {submitMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    Save and Continue
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </>
-                )}
+                Back
               </Button>
             )}
+
+            <Button
+              type="submit"
+              size="lg"
+              className="h-14 px-12 bg-gradient-to-r from-[#2F129B] to-[#6366F1] rounded-full font-normal text-base hover:shadow-lg transition-all"
+              disabled={submitMutation.isPending || (currentStep === 2 && checksRemaining <= 0)}
+            >
+              {submitMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Processing...
+                </>
+              ) : currentStep === 1 ? (
+                <>
+                  View My Results
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+              ) : (
+                <>
+                  {profileIsComplete ? "Update and View Results" : "Get My Results"}
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+              )}
+            </Button>
           </div>
 
           {!profileIsComplete && checksRemaining <= 0 && (

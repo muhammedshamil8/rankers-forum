@@ -114,7 +114,9 @@ export function RegisterModal({
       setStep(1);
       setStep1Data(null);
       onOpenChange(false);
-      onSuccess?.();
+      setTimeout(() => {
+        onSuccess?.();
+      }, 50);
     } catch {
       // Error is handled by useAuthActions
     }
@@ -126,7 +128,9 @@ export function RegisterModal({
       clearError();
       await loginWithGoogle();
       onOpenChange(false);
-      onSuccess?.();
+      setTimeout(() => {
+        onSuccess?.();
+      }, 50);
     } catch {
       // Error is handled by useAuthActions
     } finally {
@@ -268,7 +272,7 @@ export function RegisterModal({
             <Button
               type="button"
               variant="outline"
-              className="w-full h-12 rounded-full"
+              className="w-full h-12 rounded-full cursor-pointer"
               size="lg"
               onClick={handleGoogleSignUp}
               disabled={googleLoading}
@@ -303,7 +307,7 @@ export function RegisterModal({
               <button
                 type="button"
                 onClick={onLoginClick}
-                className="text-indigo-600 hover:text-indigo-700 font-semibold"
+                className="text-indigo-600 hover:text-indigo-700 font-semibold cursor-pointer"
               >
                 Log in
               </button>
@@ -343,13 +347,13 @@ export function RegisterModal({
 
             <p className="text-center text-sm text-slate-500">
               By registering you accept our{' '}
-              <a href="/terms" className="text-indigo-600 hover:underline">
+              <a href="/terms" className="text-indigo-600 hover:text-indigo-700 font-semibold cursor-pointer">
                 Terms & Conditions
               </a>
               .
             </p>
 
-            <Button type="submit" className="w-full h-12 rounded-full" size="lg" disabled={loading}>
+            <Button type="submit" className="w-full h-12 rounded-full cursor-pointer" size="lg" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

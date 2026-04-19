@@ -3,7 +3,7 @@
 // ============================================
 
 export const CATEGORIES = [
-  { value: 'general', label: 'General' },
+  { value: 'general', label: 'General Merit(GM)' },
   { value: 'obc', label: 'OBC' },
   { value: 'sc', label: 'SC' },
   { value: 'st', label: 'ST' },
@@ -22,6 +22,7 @@ export const GENDERS = [
 export const COUNSELLING_TYPES = [
   { value: 'all_india', label: 'All India Counselling' },
   { value: 'state', label: 'State Counselling' },
+  { value: 'deemed', label: 'Deemed Counselling' },
 ] as const;
 
 // Alias for quota types

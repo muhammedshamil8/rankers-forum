@@ -24,6 +24,8 @@ function mapStudent(doc: any): Student {
     locationPreference3: data.locationPreference3,
     checksUsed: data.checksUsed,
     isProfileComplete: data.isProfileComplete,
+    marks: data.marks,
+    referralCode: data.referralCode,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
   } as Student;

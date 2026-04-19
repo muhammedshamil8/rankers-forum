@@ -143,10 +143,10 @@ export function Header() {
                     </>
                   ) : (
                     <>
-                      <Button variant="outline" className="w-full" onClick={() => setLoginOpen(true)}>
+                      <Button variant="outline" className="w-full cursor-pointer" onClick={() => setLoginOpen(true)}>
                         Login
                       </Button>
-                      <Button className="w-full" onClick={() => setRegisterOpen(true)}>
+                      <Button className="w-full cursor-pointer" onClick={() => setRegisterOpen(true)}>
                         Register
                       </Button>
                     </>

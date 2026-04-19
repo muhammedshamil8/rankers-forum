@@ -76,7 +76,7 @@ export function UserMenu({ user }: UserMenuProps) {
           onClick={() => window.location.href = '/student/info'}
         >
           <User className="mr-2 h-4 w-4" />
-          <span>Profile Profile</span>
+          <span>Profile</span>
         </DropdownMenuItem>
         
         <DropdownMenuSeparator className="h-px bg-slate-100 my-1" />

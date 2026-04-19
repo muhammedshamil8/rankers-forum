@@ -41,13 +41,28 @@ export function useAuthActions(): UseAuthActionsReturn {
     setError(null);
 
     try {
-      await signInWithEmail(email, password);
-      // Wait for user data to be refreshed and return it
-      const user = await refreshUser();
+      const credential = await signInWithEmail(email, password);
+      const idToken = await credential.user.getIdToken();
+
+      // Call our login API to set the session cookie and get user data
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to establish session');
+      }
+
+      const { user } = await response.json();
       
       // Clear cache to ensure fresh data for the new user
       queryClient.clear();
       sessionStorage.clear();
+      
+      // Update the global user state silently
+      refreshUser();
       
       router.refresh();
       return user;
@@ -104,12 +119,28 @@ export function useAuthActions(): UseAuthActionsReturn {
     setError(null);
 
     try {
-      await signInWithGoogle();
-      const user = await refreshUser();
+      const credential = await signInWithGoogle();
+      const idToken = await credential.user.getIdToken();
+
+      // Call our login API to set the session cookie and get user data
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to establish session');
+      }
+
+      const { user } = await response.json();
       
       // Clear cache for new user session
       queryClient.clear();
       sessionStorage.clear();
+      
+      // Trigger silent refresh
+      refreshUser();
       
       router.refresh();
       return user;

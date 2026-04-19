@@ -14,9 +14,10 @@ export interface IStudent extends Document {
   preferredBranch: string;
   locationPreference1: string;
   locationPreference2: string;
-  locationPreference3: string;
   checksUsed: number;
   isProfileComplete: boolean;
+  marks: number;
+  referralCode: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +38,8 @@ const StudentSchema = new Schema<IStudent>(
     locationPreference3: { type: String, default: '' },
     checksUsed: { type: Number, default: 0 },
     isProfileComplete: { type: Boolean, default: true },
+    marks: { type: Number, default: 0 },
+    referralCode: { type: String, default: '' },
   },
   { timestamps: true }
 );
