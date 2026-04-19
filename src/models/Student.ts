@@ -14,6 +14,7 @@ export interface IStudent extends Document {
   preferredBranch: string;
   locationPreference1: string;
   locationPreference2: string;
+  locationPreference3: string;
   checksUsed: number;
   isProfileComplete: boolean;
   marks: number;
