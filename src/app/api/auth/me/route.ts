@@ -15,11 +15,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify the session cookie
     const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
     const uid = decodedToken.uid;
 
-    // Get user data from Firestore
     const user = await getUserById(uid);
 
     if (!user) {
@@ -36,7 +34,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if student has profile (for role-based redirect)
     let hasStudentProfile = false;
     if (user.role === 'student') {
       const studentProfile = await getStudentByUserId(uid);

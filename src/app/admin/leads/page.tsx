@@ -71,7 +71,6 @@ export default function AdminLeadsPage() {
   const [followupRemark, setFollowupRemark] = useState('');
   const [newStatus, setNewStatus] = useState('');
 
-  // Fetch assigned leads
   const { data, isLoading } = useQuery({
     queryKey: ['admin-leads', statusFilter],
     queryFn: async () => {
@@ -84,14 +83,12 @@ export default function AdminLeadsPage() {
     enabled: !!isAuthorized,
   });
 
-  // Fetch lead details
   const fetchLeadDetails = async (leadId: string) => {
     const response = await fetch(`/api/admin/leads/${leadId}`);
     if (!response.ok) throw new Error('Failed to fetch lead details');
     return response.json();
   };
 
-  // Update lead status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ leadId, status }: { leadId: string; status: string }) => {
       const response = await fetch(`/api/admin/leads/${leadId}`, {
@@ -108,7 +105,6 @@ export default function AdminLeadsPage() {
     },
   });
 
-  // Create followup mutation
   const createFollowupMutation = useMutation({
     mutationFn: async ({ leadId, remark }: { leadId: string; remark: string }) => {
       const response = await fetch('/api/admin/followups', {
@@ -133,7 +129,6 @@ export default function AdminLeadsPage() {
       setNewStatus(details.lead.status);
       setDetailsOpen(true);
     } catch {
-      // Handle error
     }
   };
 

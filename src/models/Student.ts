@@ -3,7 +3,7 @@ import { Gender } from '@/types/user';
 import { IUser } from './User';
 
 export interface IStudent extends Document {
-  userId: string | IUser; // References User._id
+  userId: string | IUser; 
   rank: number;
   yearOfPassing: number;
   category: string;
@@ -25,7 +25,7 @@ export interface IStudent extends Document {
 
 const StudentSchema = new Schema<IStudent>(
   {
-    userId: { type: String, ref: 'User', required: true, unique: true }, // Firebase UID string
+    userId: { type: String, ref: 'User', required: true, unique: true }, 
     rank: { type: Number, default: 0 },
     yearOfPassing: { type: Number, default: new Date().getFullYear() },
     category: { type: String, default: '' },
@@ -45,7 +45,6 @@ const StudentSchema = new Schema<IStudent>(
   { timestamps: true }
 );
 
-// Force re-registration of the model to pick up schema changes in development
 if (process.env.NODE_ENV === 'development') {
   delete (mongoose.models as any).Student;
 }

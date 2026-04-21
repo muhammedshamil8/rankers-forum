@@ -23,7 +23,6 @@ export function Navbar({ user, loading, onLoginClick, onRegisterClick }: NavbarP
     const { logout } = useAuthActions();
     const [callbackModalOpen, setCallbackModalOpen] = useState(false);
 
-    // Check existing callback status to disable button if already requested
     const { data: callbackStatus } = useQuery({
         queryKey: ['callback-status'],
         queryFn: async () => {
@@ -37,11 +36,9 @@ export function Navbar({ user, loading, onLoginClick, onRegisterClick }: NavbarP
     const isCallbackPending = callbackStatus?.pendingCallback;
 
     const handlePhoneClick = () => {
-        // For logged-in students, show callback modal
         if (user && user.role === 'student') {
             setCallbackModalOpen(true);
         }
-        // For non-logged users, the href will handle the tel: link
     };
 
     return (

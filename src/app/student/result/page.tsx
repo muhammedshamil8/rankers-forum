@@ -54,9 +54,7 @@ interface ResultData {
   rank: number;
 }
 
-/**
- * Robust college type normalizer — handles all variants from DB
- */
+
 function normalizeCollegeType(raw: string): 'government' | 'private' | 'deemed' | string {
   const t = (raw || '').toLowerCase().trim();
   if (t.includes('govt') || t.includes('government')) return 'government';
@@ -81,7 +79,6 @@ export default function StudentResultPage() {
 
   const queryClient = useQueryClient();
 
-  // Preferences local state
   const [prefs, setPrefs] = useState({
     score: '',
     rank: '',
@@ -146,7 +143,6 @@ export default function StudentResultPage() {
 
   const branches = ['MBBS', 'BDS'];
 
-  // Fetch available locations from DB
   const { data: locationsData } = useQuery<{ locations: string[], totalCount: number }>({
     queryKey: ['college-locations'],
     queryFn: async () => {
@@ -314,10 +310,10 @@ export default function StudentResultPage() {
   const rawColleges = resultData ? [...(resultData.colleges || []), ...(resultData.otherColleges || [])] : [];
 
 rawColleges.forEach((c: any) => {
-  const collegeId = c._id?.toString() || c.id;  // ← Check both
+  const collegeId = c._id?.toString() || c.id;  
   if (!uniqueCollegesMap.has(collegeId)) {
     uniqueCollegesMap.set(collegeId, {
-      id: collegeId,  // ← Ensure id exists
+      id: collegeId,  
       ...c,
       rank: Number(c.rank || c.closingRank || 0),
     });

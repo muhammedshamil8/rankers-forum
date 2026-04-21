@@ -1,8 +1,6 @@
 const NON_DIGIT_REGEX = /\D/g;
 
-/**
- * Normalize a phone input by trimming spacing/punctuation while preserving an optional leading +.
- */
+
 export function normalizePhoneNumber(input: string): string {
   const value = input.trim();
 
@@ -23,9 +21,7 @@ export function normalizePhoneNumber(input: string): string {
   return digits;
 }
 
-/**
- * Validates international-style phone numbers containing 10 to 15 digits.
- */
+
 export function isValidPhoneNumber(input: string): boolean {
   const normalized = normalizePhoneNumber(input);
 
@@ -37,9 +33,7 @@ export function isValidPhoneNumber(input: string): boolean {
   return digits.length >= 10 && digits.length <= 15 && !digits.startsWith('0');
 }
 
-/**
- * Produce likely storage variants so older and newer phone formats can both be found.
- */
+
 export function getPhoneLookupVariants(input: string): string[] {
   const normalized = normalizePhoneNumber(input);
 

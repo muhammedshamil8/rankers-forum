@@ -4,9 +4,7 @@ import { createStudent, getStudentByUserId, updateStudent, getRemainingChecks } 
 import { getUserById } from '@/lib/services/users';
 import { CreateStudentInput } from '@/types';
 
-/**
- * Helper to verify session and get user ID
- */
+
 async function verifySession(request: NextRequest): Promise<string | null> {
   const sessionCookie = request.cookies.get('session')?.value;
 
@@ -22,9 +20,7 @@ async function verifySession(request: NextRequest): Promise<string | null> {
   }
 }
 
-/**
- * GET /api/students/profile - Get current student profile
- */
+
 export async function GET(request: NextRequest) {
   try {
     const uid = await verifySession(request);
@@ -61,9 +57,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST /api/students/profile - Create or update student profile
- */
+
 export async function POST(request: NextRequest) {
   try {
     const uid = await verifySession(request);
@@ -95,7 +89,6 @@ export async function POST(request: NextRequest) {
       referralCode,
     } = body;
 
-    // Validate required fields (Problem 7: domicileState now optional)
     if (!rank || !yearOfPassing || !category || !gender || !counsellingType || !preferredBranch) {
       const missing = [];
       if (!rank) missing.push('rank');
@@ -110,8 +103,6 @@ export async function POST(request: NextRequest) {
     const existingStudent = await getStudentByUserId(uid);
 
     if (existingStudent) {
-      // Students can only update certain fields, and only once (per UI warning)
-      // For now, allow updates but in production might want to restrict this
       await updateStudent(uid, {
         score: score ? parseInt(score.toString()) : 0,
         rank,

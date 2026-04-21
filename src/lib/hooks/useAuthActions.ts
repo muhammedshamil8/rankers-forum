@@ -44,7 +44,6 @@ export function useAuthActions(): UseAuthActionsReturn {
       const credential = await signInWithEmail(email, password);
       const idToken = await credential.user.getIdToken();
 
-      // Call our login API to set the session cookie and get user data
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -57,11 +56,9 @@ export function useAuthActions(): UseAuthActionsReturn {
 
       const { user } = await response.json();
       
-      // Clear cache to ensure fresh data for the new user
       queryClient.clear();
       sessionStorage.clear();
       
-      // Update the global user state silently
       refreshUser();
       
       router.refresh();
@@ -80,7 +77,6 @@ export function useAuthActions(): UseAuthActionsReturn {
     setError(null);
 
     try {
-      // First, register via API to create user document
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -92,11 +88,9 @@ export function useAuthActions(): UseAuthActionsReturn {
         throw new Error(errorData.error || 'Registration failed');
       }
 
-      // sign in with the credentials
       const credential = await signInWithEmail(data.email, data.password);
       const idToken = await credential.user.getIdToken();
 
-      // ESTABLISH SESSION EXPLICITLY TO PREVENT 401
       const loginResponse = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -109,7 +103,6 @@ export function useAuthActions(): UseAuthActionsReturn {
 
       await refreshUser();
       
-      // Clear cache for new user session
       queryClient.clear();
       sessionStorage.clear();
       
@@ -135,7 +128,6 @@ export function useAuthActions(): UseAuthActionsReturn {
       const credential = await signInWithGoogle();
       const idToken = await credential.user.getIdToken();
 
-      // Call our login API to set the session cookie and get user data
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -148,11 +140,9 @@ export function useAuthActions(): UseAuthActionsReturn {
 
       const { user } = await response.json();
       
-      // Clear cache for new user session
       queryClient.clear();
       sessionStorage.clear();
       
-      // Trigger silent refresh
       refreshUser();
       
       router.refresh();
@@ -173,11 +163,9 @@ export function useAuthActions(): UseAuthActionsReturn {
     try {
       await signOut();
       
-      // Clear data immediately
       queryClient.clear();
       sessionStorage.clear();
 
-      // Clear server session
       await fetch('/api/auth/logout', { method: 'POST' });
 
       await refreshUser();

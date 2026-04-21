@@ -1,20 +1,14 @@
 import { FirestoreTimestamp } from './user';
 
-// ============================================
-// Lead Types
-// ============================================
-
 export type LeadStatus = 'new' | 'assigned' | 'in_progress' | 'completed' | 'closed';
 
 export interface Lead {
   id: string;
   studentId: string;
-  // Denormalized student info for display
   studentName: string;
   studentPhone: string;
   studentEmail: string;
   studentLocation: string;
-  // Lead data
   rankUsed: number;
   preferredBranch: string;
   year: number;
@@ -37,10 +31,6 @@ export interface CreateLeadInput {
   year: number;
 }
 
-// ============================================
-// Lead Follow-up Types
-// ============================================
-
 export type FollowupStatus = 'pending' | 'completed';
 
 export interface LeadFollowup {
@@ -59,7 +49,6 @@ export interface CreateFollowupInput {
   nextCallbackDate?: Date;
 }
 
-// Combined lead with student for display
 export interface LeadWithStudent extends Lead {
   student?: {
     rank: number;

@@ -56,7 +56,6 @@ export function ForgotPasswordModal({
       await sendPasswordReset(data.email);
       setSent(true);
     } catch {
-      // Error is handled by useAuthActions
     }
   };
 

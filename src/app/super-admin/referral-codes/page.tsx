@@ -42,7 +42,6 @@ export default function ReferralCodesPage() {
     setMounted(true);
   }, []);
 
-  // Fetch codes
   const { data, isLoading } = useQuery({
     queryKey: ['referral-codes'],
     queryFn: async () => {
@@ -53,7 +52,6 @@ export default function ReferralCodesPage() {
     enabled: !!isAuthorized,
   });
 
-  // Create mutation
   const createMutation = useMutation({
     mutationFn: async (payload: { code: string; description: string }) => {
       const response = await fetch('/api/admin/referral-codes', {
@@ -75,7 +73,6 @@ export default function ReferralCodesPage() {
     },
   });
 
-  // Toggle status mutation
   const toggleMutation = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
       const response = await fetch('/api/admin/referral-codes', {

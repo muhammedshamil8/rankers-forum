@@ -72,7 +72,6 @@ export default function ProfilePage() {
 
   const isAdminOrSuperAdmin = authUser?.role === 'admin' || authUser?.role === 'super_admin';
 
-  // Fetch profile
   const { data, isLoading } = useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
@@ -83,7 +82,6 @@ export default function ProfilePage() {
     enabled: !!isAuthorized,
   });
 
-  // Set form data when profile loads
   useEffect(() => {
     if (data?.user) {
       setPersonalData({
@@ -106,7 +104,6 @@ export default function ProfilePage() {
     }
   }, [data]);
 
-  // Update profile mutation
   const updateMutation = useMutation({
     mutationFn: async (updateData: { personal?: typeof personalData; job?: typeof jobData }) => {
       const response = await fetch('/api/profile', {
@@ -394,7 +391,6 @@ export default function ProfilePage() {
     </div>
   );
 
-  // Use different layout based on role
   if (isAdminOrSuperAdmin) {
     return (
       <>
@@ -404,7 +400,6 @@ export default function ProfilePage() {
     );
   }
 
-  // Student layout
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
       <Header />

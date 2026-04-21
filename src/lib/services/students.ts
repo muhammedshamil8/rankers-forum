@@ -31,9 +31,6 @@ function mapStudent(doc: any): Student {
   } as Student;
 }
 
-/**
- * Create a new student profile
- */
 export async function createStudent(
   userId: string,
   data: CreateStudentInput
@@ -47,7 +44,6 @@ export async function createStudent(
     isProfileComplete: true,
   });
   
-  // Increment totalInfoFilled in stats
   let statsDoc = await DashboardStatsModel.findOne();
   if (!statsDoc) {
     statsDoc = await DashboardStatsModel.create({
@@ -65,9 +61,7 @@ export async function createStudent(
   return mapStudent(student);
 }
 
-/**
- * Get a student by their user ID
- */
+
 export async function getStudentByUserId(userId: string): Promise<Student | null> {
   await dbConnect();
   
@@ -79,9 +73,7 @@ export async function getStudentByUserId(userId: string): Promise<Student | null
   return mapStudent(doc);
 }
 
-/**
- * Update a student's profile
- */
+
 export async function updateStudent(
   userId: string,
   data: Partial<Omit<Student, 'userId' | 'createdAt' | 'checksUsed'>>
@@ -90,10 +82,7 @@ export async function updateStudent(
   await StudentModel.findOneAndUpdate({ userId }, data);
 }
 
-/**
- * Increment the checks used count for a student
- * Returns false if max checks already reached
- */
+
 export async function incrementChecksUsed(userId: string): Promise<boolean> {
   await dbConnect();
   const student = await StudentModel.findOne({ userId });
@@ -111,9 +100,7 @@ export async function incrementChecksUsed(userId: string): Promise<boolean> {
   return true;
 }
 
-/**
- * Check if a student can perform more college lookups
- */
+
 export async function canPerformLookup(userId: string): Promise<boolean> {
   await dbConnect();
   const student = await StudentModel.findOne({ userId });
@@ -125,9 +112,7 @@ export async function canPerformLookup(userId: string): Promise<boolean> {
   return student.checksUsed < MAX_COLLEGE_CHECKS;
 }
 
-/**
- * Get remaining checks for a student
- */
+
 export async function getRemainingChecks(userId: string): Promise<number> {
   await dbConnect();
   const student = await StudentModel.findOne({ userId });
@@ -139,9 +124,7 @@ export async function getRemainingChecks(userId: string): Promise<number> {
   return MAX_COLLEGE_CHECKS - student.checksUsed;
 }
 
-/**
- * Get all students with pagination
- */
+
 export async function getStudents(
   limit: number = 20,
   startAfter?: string
@@ -153,7 +136,6 @@ export async function getStudents(
   if (startAfter) {
     const startDoc = await StudentModel.findOne({ userId: startAfter });
     if (startDoc) {
-      // Find documents created strictly before the startAfter document
       query = query.where('createdAt').lt(startDoc.createdAt);
     }
   }
@@ -162,17 +144,13 @@ export async function getStudents(
   return snapshot.map(mapStudent);
 }
 
-/**
- * Count total students
- */
+
 export async function countStudents(): Promise<number> {
   await dbConnect();
   return StudentModel.countDocuments();
 }
 
-/**
- * Count students with complete profiles
- */
+
 export async function countCompletedProfiles(): Promise<number> {
   await dbConnect();
   return StudentModel.countDocuments({ isProfileComplete: true });

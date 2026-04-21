@@ -3,9 +3,7 @@ import { adminAuth } from '@/lib/firebase/admin';
 import { getUserById } from '@/lib/services/users';
 import { createFollowup, getFollowupsByLeadId, completeFollowup } from '@/lib/services/leads';
 
-/**
- * Helper to verify admin session
- */
+
 async function verifyAdminSession(request: NextRequest): Promise<string | null> {
   const sessionCookie = request.cookies.get('session')?.value;
   
@@ -27,9 +25,7 @@ async function verifyAdminSession(request: NextRequest): Promise<string | null> 
   }
 }
 
-/**
- * GET /api/admin/followups?leadId=xxx - Get follow-ups for a lead
- */
+
 export async function GET(request: NextRequest) {
   try {
     const adminUid = await verifyAdminSession(request);
@@ -54,9 +50,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST /api/admin/followups - Create a new follow-up
- */
+
 export async function POST(request: NextRequest) {
   try {
     const adminUid = await verifyAdminSession(request);
@@ -85,9 +79,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * PATCH /api/admin/followups - Complete a follow-up
- */
+
 export async function PATCH(request: NextRequest) {
   try {
     const adminUid = await verifyAdminSession(request);

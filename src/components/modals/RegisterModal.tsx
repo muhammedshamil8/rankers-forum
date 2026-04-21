@@ -26,7 +26,6 @@ import { useAuthActions } from '@/lib/hooks';
 import { INDIAN_STATES } from '@/lib/constants';
 import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 
-// Step 1 schema - Contact & Personal info
 const step1Schema = z.object({
   phone: z.string()
     .trim()
@@ -40,7 +39,6 @@ const step1Schema = z.object({
   state: z.string().trim().min(1, 'State is required'),
 });
 
-// Step 2 schema - Password
 const step2Schema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string(),
@@ -109,7 +107,6 @@ export function RegisterModal({
         city: step1Data.city,
         state: step1Data.state,
       });
-      // Reset all forms
       step1Form.reset();
       step2Form.reset();
       setStep(1);
@@ -119,7 +116,6 @@ export function RegisterModal({
         onSuccess?.();
       }, 50);
     } catch {
-      // Error is handled by useAuthActions
     }
   };
 
@@ -133,7 +129,6 @@ export function RegisterModal({
         onSuccess?.();
       }, 50);
     } catch {
-      // Error is handled by useAuthActions
     } finally {
       setGoogleLoading(false);
     }

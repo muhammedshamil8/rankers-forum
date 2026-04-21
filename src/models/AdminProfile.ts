@@ -23,7 +23,7 @@ export interface IAdminProfile extends Document {
 
 const AdminProfileSchema = new Schema<IAdminProfile>(
   {
-    userId: { type: String, ref: 'User', required: true, unique: true }, // Firebase UID string
+    userId: { type: String, ref: 'User', required: true, unique: true },
     employeeNumber: { type: String, required: true, unique: true },
     dateOfJoining: { type: Date, required: true },
     jobTitle: { type: String, required: true },

@@ -84,7 +84,6 @@ export default function StudentsPage() {
     setMounted(true);
   }, []);
 
-  // Fetch students
   const { data: studentsData, isLoading: studentsLoading } = useQuery({
     queryKey: ['admin-students', stateFilter],
     queryFn: async () => {
@@ -97,7 +96,6 @@ export default function StudentsPage() {
     enabled: !!isAuthorized && activeTab === 'details',
   });
 
-  // Fetch callback requests
   const { data: leadsData, isLoading: leadsLoading } = useQuery({
     queryKey: ['callback-requests', stateFilter],
     queryFn: async () => {
@@ -112,7 +110,6 @@ export default function StudentsPage() {
     enabled: !!isAuthorized && activeTab === 'callback',
   });
 
-  // Fetch admins for assignment
   const { data: adminsData } = useQuery({
     queryKey: ['available-admins'],
     queryFn: async () => {
@@ -123,7 +120,6 @@ export default function StudentsPage() {
     enabled: !!isAuthorized && assignModalOpen,
   });
 
-  // Assign lead mutation
   const assignMutation = useMutation({
     mutationFn: async ({ leadId, adminId }: { leadId: string; adminId: string }) => {
       if (!leadId) {
@@ -154,7 +150,7 @@ export default function StudentsPage() {
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    setCurrentPage(1); // Reset to first page when search changes
+    setCurrentPage(1); 
   };
   const handlePrint = () => {
     window.print();
@@ -177,15 +173,14 @@ export default function StudentsPage() {
   };
   const handleTabChange = (tab: 'details' | 'callback') => {
     setActiveTab(tab);
-    setSearchQuery(''); // Clear search when tab changes
-    setCurrentPage(1); // Reset to first page when tab changes
+    setSearchQuery(''); 
+    setCurrentPage(1); 
   };
 
   const students: Student[] = studentsData?.students || [];
   const leads: Lead[] = leadsData?.leads || [];
   const admins = adminsData?.admins || [];
 
-  // Filter students based on search query
   const filteredStudents = students.filter((student) => {
     if (!searchQuery.trim()) return true;
 
@@ -200,7 +195,6 @@ export default function StudentsPage() {
     );
   });
 
-  // Filter leads based on search query
   const filteredLeads = leads.filter((lead) => {
     if (!searchQuery.trim()) return true;
 
@@ -214,21 +208,18 @@ export default function StudentsPage() {
     );
   });
 
-  // Pagination calculations for students
   const studentsTotalItems = filteredStudents.length;
   const studentsTotalPages = Math.ceil(studentsTotalItems / itemsPerPage);
   const studentsStartIndex = (currentPage - 1) * itemsPerPage;
   const studentsEndIndex = studentsStartIndex + itemsPerPage;
   const paginatedStudents = filteredStudents.slice(studentsStartIndex, studentsEndIndex);
 
-  // Pagination calculations for leads
   const leadsTotalItems = filteredLeads.length;
   const leadsTotalPages = Math.ceil(leadsTotalItems / itemsPerPage);
   const leadsStartIndex = (currentPage - 1) * itemsPerPage;
   const leadsEndIndex = leadsStartIndex + itemsPerPage;
   const paginatedLeads = filteredLeads.slice(leadsStartIndex, leadsEndIndex);
 
-  // Reset to page 1 if current page is out of bounds
   useEffect(() => {
     const totalPages = activeTab === 'details' ? studentsTotalPages : leadsTotalPages;
     if (currentPage > totalPages && totalPages > 0) {
@@ -249,7 +240,6 @@ export default function StudentsPage() {
   const handleAssignCallbackFromStudent = (student: Student) => {
     if (!student.hasCallback) return;
 
-    // Construct a Lead object from Student data
     const lead: Lead = {
       id: student.leadId || '',
       studentId: student.id,

@@ -7,9 +7,7 @@ import { createLead } from '@/lib/services/leads';
 import { CollegeType } from '@/types';
 import { CURRENT_YEAR, MAX_COLLEGE_CHECKS } from '@/lib/constants';
 
-/**
- * Helper to verify session and get user ID
- */
+
 async function verifySession(request: NextRequest): Promise<string | null> {
   const sessionCookie = request.cookies.get('session')?.value;
 
@@ -25,10 +23,7 @@ async function verifySession(request: NextRequest): Promise<string | null> {
   }
 }
 
-/**
- * GET /api/colleges/eligible - Get eligible colleges for student
- * Query params: type (optional), state (optional)
- */
+
 export async function GET(request: NextRequest) {
   try {
     const uid = await verifySession(request);
@@ -52,7 +47,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if student can perform lookup
     const canLookup = await canPerformLookup(uid);
 
     if (!canLookup) {
@@ -62,13 +56,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get query parameters
     const searchParams = request.nextUrl.searchParams;
     const collegeType = searchParams.get('type') as CollegeType | null;
     const state = searchParams.get('state');
     const tab = searchParams.get('tab') || undefined;
 
-    // Get eligible colleges
     const { primary, others } = await getEligibleColleges({
       studentRank: student.rank,
       courseName: student.preferredBranch,
@@ -79,19 +71,14 @@ export async function GET(request: NextRequest) {
       locations: [student.locationPreference1, student.locationPreference2, student.locationPreference3].filter(Boolean),
     });
 
-    // Only increment usage and create lead on first call (not on filtering)
     const isFirstLookup = searchParams.get('track') === 'true';
 
     if (isFirstLookup) {
-      // Increment checks used
       await incrementChecksUsed(uid);
-
-      // Extract student info with robust fallbacks
       const firstName = user?.firstName || '';
       const lastName = user?.lastName || '';
       let studentName = `${firstName} ${lastName}`.trim();
 
-      // Fallback to email prefix if name is truly missing
       if (!studentName) {
         studentName = user?.email?.split('@')[0] || 'Student';
       }
@@ -99,7 +86,6 @@ export async function GET(request: NextRequest) {
       const studentPhone = user?.phone || '';
       const studentEmail = user?.email || '';
       
-      // Logic for location: User city/state or Student domicile
       let studentLocation = '';
       if (user?.city && user?.state) {
         studentLocation = `${user.city}, ${user.state}`;
@@ -109,7 +95,6 @@ export async function GET(request: NextRequest) {
         studentLocation = student.domicileState;
       }
 
-      // Create lead
       await createLead({
         studentId: uid,
         studentName,

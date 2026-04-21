@@ -5,9 +5,7 @@ import { getLeadById, assignLead, updateLeadStatus } from '@/lib/services/leads'
 import { getStudentByUserId } from '@/lib/services/students';
 import { LeadStatus } from '@/types';
 
-/**
- * Helper to verify session and require super_admin role
- */
+
 async function verifySuperAdminSession(request: NextRequest): Promise<string | null> {
   const sessionCookie = request.cookies.get('session')?.value;
   
@@ -29,9 +27,7 @@ async function verifySuperAdminSession(request: NextRequest): Promise<string | n
   }
 }
 
-/**
- * GET /api/admin/leads/[id] - Get lead details with student info
- */
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -57,12 +53,9 @@ export async function GET(
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
     }
 
-    // Check if admin has access to this lead
     if (user.role === 'admin' && lead.assignedAdminId !== decoded.uid) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
-
-    // Get student details
     const student = await getStudentByUserId(lead.studentId);
     const studentUser = await getUserById(lead.studentId);
 
@@ -85,10 +78,7 @@ export async function GET(
     return NextResponse.json({ error: 'Failed to get lead' }, { status: 500 });
   }
 }
-/**
- * PATCH /api/admin/leads/[id] - Update lead (assign or change status)
- * Supports both action-based and direct field updates
- */
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -98,11 +88,9 @@ export async function PATCH(
     const body = await request.json();
     const { action, adminId, status, assignToAdminId, assignedTo } = body;
 
-    // Handle assignment - supports multiple field names for flexibility
     const assignmentAdminId = assignToAdminId || assignedTo || adminId;
     
     if (action === 'assign' || (assignmentAdminId && !action)) {
-      // Only super admin can assign
       const superAdminUid = await verifySuperAdminSession(request);
       
       if (!superAdminUid) {
@@ -118,9 +106,7 @@ export async function PATCH(
       return NextResponse.json({ success: true, message: 'Lead assigned' });
     }
 
-    // Handle status update
     if (action === 'status' || (status && !action)) {
-      // Both admin and super admin can update status
       const sessionCookie = request.cookies.get('session')?.value;
       
       if (!sessionCookie) {

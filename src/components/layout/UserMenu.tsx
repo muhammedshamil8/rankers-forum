@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation';
 import { getRedirectUrl } from '@/lib/hooks';
 
 interface UserMenuProps {
-  user: any; // User from useAuth
+  user: any; 
 }
 
 export function UserMenu({ user }: UserMenuProps) {

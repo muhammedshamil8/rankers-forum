@@ -1,25 +1,15 @@
 import { FirestoreTimestamp } from './user';
 
-// ============================================
-// College Types
-// ============================================
-
 export type CollegeType = 'government' | 'private' | 'deemed' | '';
-
-// ============================================
-// College Rank Cutoff Types
-// ============================================
 
 export interface CollegeRankCutoff {
   id: string;
-  // All data denormalized - no foreign keys
   collegeName: string;
   collegeLocation: string;
   collegeType: CollegeType;
   quota?: string;
   city?: string;
   state?: string;
-  // Course data
   courseName: string;
   courseFees?: number;
   year: number;
@@ -28,20 +18,12 @@ export interface CollegeRankCutoff {
   createdAt: FirestoreTimestamp;
 }
 
-// ============================================
-// Chance Indicator
-// ============================================
-
 export type ChanceLevel = 'high' | 'moderate' | 'low' | 'not_eligible';
 
 export interface CollegeWithChance extends CollegeRankCutoff {
   chance: ChanceLevel;
   chanceLabel: string;
 }
-
-// ============================================
-// Excel Upload Types
-// ============================================
 
 export type UploadStatus = 'processing' | 'completed' | 'failed';
 
@@ -61,10 +43,6 @@ export interface ExcelUploadLog {
   createdAt: FirestoreTimestamp;
   completedAt: FirestoreTimestamp | null;
 }
-
-// ============================================
-// Dashboard Stats
-// ============================================
 
 export interface DashboardStats {
   id: string;

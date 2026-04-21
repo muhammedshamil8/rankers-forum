@@ -1,14 +1,4 @@
-// ============================================
-// Generic Timestamp type for Firestore compatibility
-// Works with both firebase/firestore and firebase-admin/firestore
-// ============================================
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type FirestoreTimestamp = any;
-
-// ============================================
-// User Types
-// ============================================
 
 export type UserRole = 'student' | 'admin' | 'super_admin';
 
@@ -36,10 +26,6 @@ export interface CreateUserInput {
   city: string;
   state: string;
 }
-
-// ============================================
-// Student Types
-// ============================================
 
 export type Gender = 'male' | 'female' | 'other';
 
@@ -81,10 +67,6 @@ export interface CreateStudentInput {
   referralCode?: string;
 }
 
-// ============================================
-// Admin Profile Types
-// ============================================
-
 export type JobType = 'full_time' | 'part_time' | 'contract';
 
 export interface AdminProfile {
@@ -117,7 +99,6 @@ export interface CreateAdminInput {
   maxActiveLeads: number;
 }
 
-// Combined user with profile for display
 export interface AdminWithUser extends User {
   profile: AdminProfile;
 }

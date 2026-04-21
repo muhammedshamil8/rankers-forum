@@ -3,7 +3,6 @@ import { adminAuth } from '@/lib/firebase/admin';
 
 export async function POST(request: NextRequest) {
   try {
-    // Clear the session cookie
     const response = NextResponse.json({ success: true });
     
     response.cookies.set('session', '', {
@@ -14,7 +13,6 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
 
-    // Optionally revoke the session (useful if you want to invalidate all sessions)
     const sessionCookie = request.cookies.get('session')?.value;
     
     if (sessionCookie) {
@@ -22,7 +20,6 @@ export async function POST(request: NextRequest) {
         const decoded = await adminAuth.verifySessionCookie(sessionCookie);
         await adminAuth.revokeRefreshTokens(decoded.uid);
       } catch {
-        // Session might already be invalid, which is fine
       }
     }
 
@@ -30,7 +27,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Logout error:', error);
     
-    // Still clear the cookie even if there's an error
     const response = NextResponse.json({ success: true });
     
     response.cookies.set('session', '', {

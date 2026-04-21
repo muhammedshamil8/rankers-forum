@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
 
     let user = null;
 
-    // Attempt to find by phone (supports spaces, dashes, + prefix variations)
     const phoneCandidates = getPhoneLookupVariants(identifier);
     for (const candidate of phoneCandidates) {
       user = await getUserByPhone(candidate);
@@ -25,7 +24,6 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // If not found by phone, try email (in case client is unsure)
     if (!user && identifier.includes('@')) {
       user = await getUserByEmail(identifier.trim().toLowerCase());
     }
@@ -37,8 +35,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Return the email associated with this identifier
-    // This allows the client to sign in with Firebase using the email
     return NextResponse.json({
       email: user.email,
     });

@@ -41,7 +41,6 @@ export default function PreviousYearPage() {
   const [stateFilter, setStateFilter] = useState('all');
   const [expandedCollege, setExpandedCollege] = useState<string | null>(null);
 
-  // Fetch previous year data
   const { data, isLoading } = useQuery({
     queryKey: ['previous-year-colleges'],
     queryFn: async () => {
@@ -66,7 +65,6 @@ export default function PreviousYearPage() {
     );
   }
 
-  // Deduplicate colleges (in case of overlap between colleges and otherColleges)
   const uniqueCollegesMap = new Map();
   const rawColleges = [
     ...(data?.cutoffsByYear ? Object.values(data.cutoffsByYear).flatMap((y: any) => [
@@ -77,7 +75,6 @@ export default function PreviousYearPage() {
   ];
 
   rawColleges.forEach((c: any) => {
-    // Composite key of ID and Year to be safe, but mostly MongoDB ID is unique
     const uniqueKey = `${c.id || c._id}-${c.year || 2024}`;
     if (!uniqueCollegesMap.has(uniqueKey)) {
       uniqueCollegesMap.set(uniqueKey, {
@@ -97,13 +94,12 @@ export default function PreviousYearPage() {
   }
 
   const filteredColleges = colleges.filter((college: College) => {
-    // Ultra-robust type matching
     let type = (college.collegeType || '').toLowerCase();
     let normalized = '';
     if (type.includes('govt') || type.includes('government')) normalized = 'government';
     else if (type.includes('private university') || type.includes('deemed')) normalized = 'deemed';
     else if (type.includes('private')) normalized = 'private';
-    else normalized = type; // Fallback to raw type
+    else normalized = type; 
 
     const matchesType = normalized === activeTab;
     const matchesState = stateFilter === 'all' || (college.collegeLocation && college.collegeLocation.includes(stateFilter));
@@ -113,9 +109,7 @@ export default function PreviousYearPage() {
 
   console.log(`DEBUG: Filtered colleges for tab ${activeTab}:`, filteredColleges.length);
 
-  // Group by year
   const collegesByYear = filteredColleges.reduce((acc, college: College) => {
-    // Fallback to year if data structure is nested or flat
     const year = college.year || 2024; 
     if (!acc[year]) acc[year] = [];
     acc[year].push(college);

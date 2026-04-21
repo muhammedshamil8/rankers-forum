@@ -14,7 +14,7 @@ function getFirebaseAdminApp(): App {
     return adminApp;
   }
 
-  // Validate environment variables
+ 
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;
@@ -25,7 +25,6 @@ function getFirebaseAdminApp(): App {
     );
   }
 
-  // Handle the private key - it may contain escaped newlines
   const formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
 
   try {
@@ -43,7 +42,6 @@ function getFirebaseAdminApp(): App {
   }
 }
 
-// Lazy getters for auth
 export function getAdminAuth(): Auth {
   if (!adminAuthInstance) {
     adminAuthInstance = getAuth(getFirebaseAdminApp());
@@ -51,7 +49,6 @@ export function getAdminAuth(): Auth {
   return adminAuthInstance;
 }
 
-// Backward compatibility exports (eager initialization)
 export const adminAuth = {
   get createUser() { return getAdminAuth().createUser.bind(getAdminAuth()); },
   get getUser() { return getAdminAuth().getUser.bind(getAdminAuth()); },

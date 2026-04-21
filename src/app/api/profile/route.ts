@@ -3,9 +3,7 @@ import { adminAuth } from '@/lib/firebase/admin';
 import { getUserById, updateUser } from '@/lib/services/users';
 import { getAdminByUserId, updateAdminProfile } from '@/lib/services/admins';
 
-/**
- * Helper to verify any authenticated session
- */
+
 async function verifySession(request: NextRequest): Promise<string | null> {
   const sessionCookie = request.cookies.get('session')?.value;
 
@@ -21,9 +19,7 @@ async function verifySession(request: NextRequest): Promise<string | null> {
   }
 }
 
-/**
- * GET /api/profile - Get current user profile
- */
+
 export async function GET(request: NextRequest) {
   try {
     const uid = await verifySession(request);
@@ -38,7 +34,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // If admin/super_admin, also get admin profile
     let adminProfile = null;
     if (user.role === 'admin' || user.role === 'super_admin') {
       adminProfile = await getAdminByUserId(uid);
@@ -79,9 +74,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * PATCH /api/profile - Update current user profile
- */
+
 export async function PATCH(request: NextRequest) {
   try {
     const uid = await verifySession(request);
@@ -98,7 +91,6 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json();
 
-    // Update user fields
     const userUpdates: Record<string, unknown> = {};
     if (body.firstName) userUpdates.firstName = body.firstName;
     if (body.lastName) userUpdates.lastName = body.lastName;
@@ -110,7 +102,6 @@ export async function PATCH(request: NextRequest) {
       await updateUser(uid, userUpdates);
     }
 
-    // Update admin profile fields if applicable
     if ((user.role === 'admin' || user.role === 'super_admin') && body.adminProfile) {
       const adminUpdates: Record<string, unknown> = {};
       if (body.adminProfile.maritalStatus) adminUpdates.maritalStatus = body.adminProfile.maritalStatus;

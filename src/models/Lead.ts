@@ -5,8 +5,7 @@ import { IUser } from './User';
 export type LeadStatus = 'new' | 'assigned' | 'in_progress' | 'completed' | 'closed';
 
 export interface ILead extends Document {
-  studentId: string; // Firebase UID
-  // Denormalized student info for display in admin panels
+  studentId: string; 
   studentName: string;
   studentPhone: string;
   studentEmail: string;
@@ -16,7 +15,7 @@ export interface ILead extends Document {
   year: number;
   status: LeadStatus;
   callbackRequested: boolean;
-  assignedAdminId: string | null; // Firebase UID
+  assignedAdminId: string | null; 
   assignedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -24,8 +23,7 @@ export interface ILead extends Document {
 
 const LeadSchema = new Schema<ILead>(
   {
-    studentId: { type: String, required: true }, // References User._id (Firebase UID)
-    // Denormalized student info — stored at lead creation time so admin panels work without joins
+    studentId: { type: String, required: true }, 
     studentName: { type: String, default: '' },
     studentPhone: { type: String, default: '' },
     studentEmail: { type: String, default: '' },
@@ -35,7 +33,7 @@ const LeadSchema = new Schema<ILead>(
     year: { type: Number, required: true },
     status: { type: String, enum: ['new', 'assigned', 'in_progress', 'completed', 'closed'], default: 'new' },
     callbackRequested: { type: Boolean, default: false },
-    assignedAdminId: { type: String, default: null }, // References User._id (Firebase UID)
+    assignedAdminId: { type: String, default: null }, 
     assignedAt: { type: Date, default: null },
   },
   { timestamps: true }
@@ -43,9 +41,7 @@ const LeadSchema = new Schema<ILead>(
 
 export const LeadModel = mongoose.models.Lead || mongoose.model<ILead>('Lead', LeadSchema);
 
-// ============================================
-// Followup Schema
-// ============================================
+
 
 export type FollowupStatus = 'pending' | 'completed';
 

@@ -24,11 +24,10 @@ async function checkData() {
   const courses = await CollegeCutoffModel.distinct('courseName');
   console.log('Available courses (first 10):', courses.slice(0, 10));
 
-  // Test query similar to what's failing
   const testQuery = {
     year: 2025,
-    category: 'OBC', // This is what the code uses after toUpperCase()
-    quota: 'ALL INDIA', // This is what the code uses after toUpperCase()
+    category: 'OBC',
+    quota: 'ALL INDIA',
     courseName: 'MBBS'
   };
   const testResults = await CollegeCutoffModel.find(testQuery).limit(5);

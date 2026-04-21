@@ -4,9 +4,7 @@ import { getUserById } from '@/lib/services/users';
 import dbConnect from '@/lib/mongodb';
 import { ReferralCodeModel } from '@/models/ReferralCode';
 
-/**
- * Helper to verify super admin session
- */
+
 async function verifySuperAdminSession(request: NextRequest): Promise<string | null> {
   const sessionCookie = request.cookies.get('session')?.value;
   
@@ -28,9 +26,7 @@ async function verifySuperAdminSession(request: NextRequest): Promise<string | n
   }
 }
 
-/**
- * GET /api/admin/referral-codes - List all referral codes
- */
+
 export async function GET(request: NextRequest) {
   try {
     const superAdminUid = await verifySuperAdminSession(request);
@@ -57,9 +53,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST /api/admin/referral-codes - Create new referral code
- */
+
 export async function POST(request: NextRequest) {
   try {
     const superAdminUid = await verifySuperAdminSession(request);
@@ -75,7 +69,6 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
 
-    // Check uniqueness
     const existing = await ReferralCodeModel.findOne({ code: code.toUpperCase() });
     if (existing) {
       return NextResponse.json({ error: 'Referral code already exists' }, { status: 400 });
@@ -103,9 +96,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * PATCH /api/admin/referral-codes - Toggle status
- */
+
 export async function PATCH(request: NextRequest) {
   try {
     const superAdminUid = await verifySuperAdminSession(request);

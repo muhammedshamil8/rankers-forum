@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getLocations } from '@/lib/services/colleges';
 
-/**
- * GET /api/colleges/locations - Get available locations for selection
- * Public endpoint - no auth required
- */
+
 export async function GET(request: NextRequest) {
     try {
         const locations = await getLocations();

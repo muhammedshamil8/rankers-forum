@@ -4,9 +4,7 @@ import { getUserById } from '@/lib/services/users';
 import { getLeads, populateStudentInfo } from '@/lib/services/leads';
 import { LeadStatus } from '@/types';
 
-/**
- * Helper to verify session and require admin/super_admin role
- */
+
 async function verifyAdminSession(request: NextRequest): Promise<{ uid: string; role: string } | null> {
   const sessionCookie = request.cookies.get('session')?.value;
 
@@ -28,10 +26,7 @@ async function verifyAdminSession(request: NextRequest): Promise<{ uid: string; 
   }
 }
 
-/**
- * GET /api/admin/leads - Get leads (filtered by role)
- * Super admin sees all, admin sees only assigned
- */
+
 export async function GET(request: NextRequest) {
   try {
     const session = await verifyAdminSession(request);
@@ -48,8 +43,6 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const startAfter = searchParams.get('startAfter') || undefined;
 
-    // Admin only sees their assigned leads
-    // Super admin sees all, with optional adminId filter
     const options: {
       status?: LeadStatus;
       callbackRequested?: boolean;

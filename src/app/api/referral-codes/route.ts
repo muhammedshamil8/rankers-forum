@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { ReferralCodeModel } from '@/models/ReferralCode';
 
-/**
- * GET /api/referral-codes - Get active referral codes
- * Public endpoint
- */
+
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();

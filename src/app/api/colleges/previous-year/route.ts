@@ -51,12 +51,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get query parameters
     const searchParams = request.nextUrl.searchParams;
     const collegeType = searchParams.get('type') as CollegeType | null;
     const state = searchParams.get('state');
 
-    // Get previous year cutoffs (last 2 years)
     const cutoffsByYear = await getPreviousYearCutoffs({
       studentRank: student.rank,
       courseName: student.preferredBranch,

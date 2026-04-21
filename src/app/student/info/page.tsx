@@ -29,7 +29,6 @@ import {
 } from '@/lib/constants';
 import { LogoutModal } from '@/components/modals';
 
-// Validation schemas for each step
 const basicDetailsSchema = Yup.object({
   score: Yup.number()
     .typeError('Score must be a number')
@@ -57,13 +56,11 @@ export default function StudentInfoPage() {
   const queryClient = useQueryClient();
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  // Refs for each field to enable scrolling
   const fieldRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const currentYear = new Date().getFullYear();
   const years = [currentYear, currentYear - 1, currentYear - 2];
 
-  // Check if student exists
   const { data: profileData } = useQuery({
     queryKey: ['student-profile'],
     queryFn: async () => {
@@ -74,7 +71,6 @@ export default function StudentInfoPage() {
     enabled: !!isAuthorized,
   });
 
-  // Fetch available referral codes
   const { data: referralCodesData } = useQuery<{ codes: { code: string, description: string }[] }>({
     queryKey: ['referral-codes'],
     queryFn: async () => {
@@ -102,9 +98,7 @@ export default function StudentInfoPage() {
           institution: data.institution || '',
           domicileState: data.domicileState || '',
           referralCode: data.referralCode === 'none' ? '' : data.referralCode || '',
-          // Ensure isProfileComplete is set to true on save
           isProfileComplete: true,
-          // Maintain existing preferences if they exist, or set safe defaults
           counsellingType: student?.counsellingType || 'all_india',
           preferredBranch: student?.preferredBranch || 'MBBS',
           locationPreference1: student?.locationPreference1 || '',
@@ -127,7 +121,6 @@ export default function StudentInfoPage() {
     },
   });
 
-  // Formik setup
   const formik = useFormik({
     initialValues: {
       score: student?.score || '',
@@ -149,7 +142,6 @@ export default function StudentInfoPage() {
     },
   });
 
-  // Scroll to first error field
   useEffect(() => {
     if (formik.submitCount > 0 && Object.keys(formik.errors).length > 0) {
       const firstErrorField = Object.keys(formik.errors)[0];

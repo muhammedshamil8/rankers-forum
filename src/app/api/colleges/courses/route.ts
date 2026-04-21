@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCourses } from '@/lib/services/colleges';
 
-/**
- * GET /api/colleges/courses - Get available courses for selection
- * Public endpoint - no auth required
- */
+
 export async function GET(request: NextRequest) {
     try {
         const courses = await getCourses();

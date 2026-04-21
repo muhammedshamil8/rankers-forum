@@ -30,7 +30,6 @@ export function CallbackModal({
   const [submitted, setSubmitted] = useState(false);
   const [navigatingToForm, setNavigatingToForm] = useState(false);
 
-  // Check existing callback status
   const { data: callbackStatus, isLoading: statusLoading } = useQuery({
     queryKey: ['callback-status'],
     queryFn: async () => {
@@ -41,7 +40,6 @@ export function CallbackModal({
     enabled: open && hasStudentProfile,
   });
 
-  // Submit callback request
   const submitMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch('/api/students/callback', {
@@ -74,7 +72,6 @@ export function CallbackModal({
     resetModalState();
     onOpenChange(false);
 
-    // Defer navigation by a frame so dialog close animation completes cleanly.
     requestAnimationFrame(() => {
       router.push('/student/info');
     });
@@ -84,7 +81,6 @@ export function CallbackModal({
     if (requestCallback) {
       submitMutation.mutate();
     } else {
-      // Just close the modal
       onOpenChange(false);
     }
   };
@@ -95,7 +91,6 @@ export function CallbackModal({
     onOpenChange(false);
   };
 
-  // Show loading state
   if (statusLoading && hasStudentProfile) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
@@ -110,7 +105,6 @@ export function CallbackModal({
     );
   }
 
-  // Show success state after submission
   if (submitted) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
@@ -134,7 +128,6 @@ export function CallbackModal({
     );
   }
 
-  // Show profile required state
   if (!hasStudentProfile) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
@@ -175,7 +168,6 @@ export function CallbackModal({
     );
   }
 
-  // Show already has pending callback
   if (callbackStatus?.pendingCallback) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
@@ -212,7 +204,6 @@ export function CallbackModal({
     );
   }
 
-  // Show callback request form
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md [&>button]:hidden">

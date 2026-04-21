@@ -34,7 +34,6 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // Upload mutation
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
@@ -57,7 +56,6 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
       queryClient.invalidateQueries({ queryKey: ['upload-history'] });
       queryClient.invalidateQueries({ queryKey: ['college-years'] });
       queryClient.invalidateQueries({ queryKey: ['colleges', selectedYear] });
-      // Reset state and close dialog after successful upload
       setTimeout(() => {
         setSelectedFile(null);
         onOpenChange(false);

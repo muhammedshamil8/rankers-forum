@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 import { UserRole } from '@/types/user';
 
 export interface IUser extends Document<string> {
-  _id: string; // Firebase UID
+  _id: string; 
   role: UserRole;
   firstName: string;
   lastName: string;
@@ -18,7 +18,7 @@ export interface IUser extends Document<string> {
 
 const UserSchema = new Schema<IUser>(
   {
-    _id: { type: String, required: true }, // Firebase UID string as the primary key
+    _id: { type: String, required: true }, 
     role: { type: String, enum: ['student', 'admin', 'super_admin'], required: true },
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
@@ -31,11 +31,10 @@ const UserSchema = new Schema<IUser>(
   },
   { 
     timestamps: true,
-    _id: false // Disable auto-generated ObjectId to use our manual _id
+    _id: false
   }
 );
 
-// Force clear model cache during development to update schema
 if (mongoose.models && mongoose.models.User) {
   mongoose.deleteModel('User');
 }

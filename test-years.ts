@@ -5,8 +5,6 @@ async function testYears() {
   await dbConnect();
   console.log('Connected to DB');
 
-  // Test case: Rank 50000, Category: obc, Year reference: 2025, yearsBack: 2
-  // Expect data for 2024 and 2023.
   const options = {
     studentRank: 50000,
     courseName: 'MBBS',

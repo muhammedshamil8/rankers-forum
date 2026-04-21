@@ -5,9 +5,7 @@ import { UserModel } from '@/models/User';
 import { StudentModel } from '@/models/Student';
 import { LeadModel } from '@/models/Lead';
 
-/**
- * Helper to get the single stats document
- */
+
 async function getStatsDoc() {
   let doc = await DashboardStatsModel.findOne();
   if (!doc) {
@@ -21,17 +19,13 @@ async function getStatsDoc() {
   return doc;
 }
 
-/**
- * Initialize dashboard stats if they don't exist
- */
+
 export async function initializeStats(): Promise<void> {
   await dbConnect();
   await getStatsDoc();
 }
 
-/**
- * Get dashboard stats
- */
+
 export async function getDashboardStats(): Promise<DashboardStats> {
   await dbConnect();
   const doc = await getStatsDoc();
@@ -46,9 +40,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   } as DashboardStats;
 }
 
-/**
- * Increment a specific stat
- */
+
 export async function incrementStat(
   stat: keyof Omit<DashboardStats, 'id' | 'updatedAt'>,
   amount: number = 1
@@ -60,9 +52,7 @@ export async function incrementStat(
   });
 }
 
-/**
- * Decrement a specific stat
- */
+
 export async function decrementStat(
   stat: keyof Omit<DashboardStats, 'id' | 'updatedAt'>,
   amount: number = 1
@@ -74,9 +64,7 @@ export async function decrementStat(
   });
 }
 
-/**
- * Recalculate all stats from scratch (utility function)
- */
+
 export async function recalculateStats(): Promise<DashboardStats> {
   await dbConnect();
   

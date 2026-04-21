@@ -24,7 +24,6 @@ export function LogoutModal({ open, onOpenChange }: LogoutModalProps) {
       await logout();
       onOpenChange(false);
     } catch {
-      // Error handled by useAuthActions
     }
   };
 

@@ -5,7 +5,6 @@ import { AdminProfileModel } from '@/models/AdminProfile';
 import { DEFAULT_MAX_ACTIVE_LEADS } from '../constants';
 import { AdminProfile, CreateAdminInput, AdminWithUser, User } from '@/types';
 
-// Helper to map
 function mapUser(doc: any): User {
   const data = doc.toObject ? doc.toObject() : doc;
   return {
@@ -46,9 +45,7 @@ function mapAdminProfile(doc: any): AdminProfile {
   } as AdminProfile;
 }
 
-/**
- * Create a new admin user and profile
- */
+
 export async function createAdmin(
   data: CreateAdminInput,
   password: string
@@ -57,7 +54,6 @@ export async function createAdmin(
   
   let userRecord;
   try {
-    // Create Firebase Auth user
     userRecord = await adminAuth.createUser({
       email: data.email,
       password: password,
@@ -105,15 +101,11 @@ export async function createAdmin(
       profile: mapAdminProfile(adminProfile),
     } as AdminWithUser;
   } catch (error) {
-    // Rollback Firebase user if DB save fails
     await adminAuth.deleteUser(userRecord.uid);
     throw error;
   }
 }
 
-/**
- * Get an admin profile by user ID
- */
 export async function getAdminByUserId(userId: string): Promise<AdminProfile | null> {
   await dbConnect();
   const doc = await AdminProfileModel.findOne({ userId });
@@ -121,9 +113,7 @@ export async function getAdminByUserId(userId: string): Promise<AdminProfile | n
   return mapAdminProfile(doc);
 }
 
-/**
- * Get admin with user data
- */
+
 export async function getAdminWithUser(userId: string): Promise<AdminWithUser | null> {
   await dbConnect();
   const user = await UserModel.findById(userId);
@@ -137,9 +127,7 @@ export async function getAdminWithUser(userId: string): Promise<AdminWithUser | 
   } as AdminWithUser;
 }
 
-/**
- * Get all admins with their user data
- */
+
 export async function getAllAdmins(): Promise<AdminWithUser[]> {
   await dbConnect();
   
@@ -166,13 +154,9 @@ export async function getAllAdmins(): Promise<AdminWithUser[]> {
   return results;
 }
 
-/**
- * Get available admins for lead assignment
- */
+
 export async function getAvailableAdmins(): Promise<AdminWithUser[]> {
   await dbConnect();
-  // We need admins that are available and have capacity.
-  // $expr allows us to compare two fields in the same document.
   const activeProfiles = await AdminProfileModel.find({
     isAvailable: true,
     $expr: { $lt: ["$currentActiveLeads", "$maxActiveLeads"] }
@@ -200,9 +184,7 @@ export async function getAvailableAdmins(): Promise<AdminWithUser[]> {
   return results;
 }
 
-/**
- * Update admin profile
- */
+
 export async function updateAdminProfile(
   userId: string,
   data: Partial<Omit<AdminProfile, 'userId' | 'createdAt'>>
@@ -211,9 +193,7 @@ export async function updateAdminProfile(
   await AdminProfileModel.findOneAndUpdate({ userId }, data);
 }
 
-/**
- * Set admin availability
- */
+
 export async function setAdminAvailability(
   userId: string,
   isAvailable: boolean
@@ -222,9 +202,7 @@ export async function setAdminAvailability(
   await AdminProfileModel.findOneAndUpdate({ userId }, { isAvailable });
 }
 
-/**
- * Deactivate an admin
- */
+
 export async function deactivateAdmin(userId: string): Promise<void> {
   await dbConnect();
   await Promise.all([
@@ -233,9 +211,7 @@ export async function deactivateAdmin(userId: string): Promise<void> {
   ]);
 }
 
-/**
- * Activate an admin
- */
+
 export async function activateAdmin(userId: string): Promise<void> {
   await dbConnect();
   await Promise.all([

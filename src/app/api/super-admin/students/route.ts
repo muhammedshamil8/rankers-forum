@@ -6,9 +6,7 @@ import { UserModel } from '@/models/User';
 import { StudentModel } from '@/models/Student';
 import { LeadModel } from '@/models/Lead';
 
-/**
- * Helper to verify super admin session
- */
+
 async function verifySuperAdminSession(request: NextRequest): Promise<string | null> {
   const sessionCookie = request.cookies.get('session')?.value;
 
@@ -30,10 +28,7 @@ async function verifySuperAdminSession(request: NextRequest): Promise<string | n
   }
 }
 
-/**
- * GET /api/super-admin/students - Get all students with their user data
- * Query params: state (optional) - filter by state
- */
+
 export async function GET(request: NextRequest) {
   try {
     const superAdminUid = await verifySuperAdminSession(request);
@@ -47,7 +42,6 @@ export async function GET(request: NextRequest) {
 
     await dbConnect();
 
-    // Query users with student role
     let usersQuery: any = { role: 'student' };
 
     if (stateFilter && stateFilter !== 'all') {
@@ -57,12 +51,9 @@ export async function GET(request: NextRequest) {
     const users = await UserModel.find(usersQuery);
     const userIds = users.map(u => u._id.toString());
 
-    // Fetch batch student profiles to avoid N+1 queries
     const studentProfiles = await StudentModel.find({ userId: { $in: userIds } });
     const studentMap = new Map();
     studentProfiles.forEach(s => studentMap.set(s.userId.toString(), s));
-
-    // Fetch batch leads
     const activeLeads = await LeadModel.find({
       studentId: { $in: userIds },
       callbackRequested: true

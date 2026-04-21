@@ -11,6 +11,5 @@ export const exportToExcel = (data: any[], filename: string, sheetName: string =
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
   
-  // Generate buffer and trigger download
   XLSX.writeFile(workbook, `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`);
 };

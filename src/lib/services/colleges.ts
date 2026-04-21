@@ -7,13 +7,7 @@ import {
   CollegeType,
 } from '@/types';
 
-// ============================================
-// Chance Calculation
-// ============================================
 
-/**
- * Calculate chance level based on student rank vs closing rank
- */
 export function calculateChance(studentRank: number, closingRank: number): ChanceLevel {
   if (studentRank > closingRank) {
     return 'not_eligible';
@@ -27,9 +21,7 @@ export function calculateChance(studentRank: number, closingRank: number): Chanc
   return 'low';
 }
 
-/**
- * Get chance label for display
- */
+
 export function getChanceLabel(chance: ChanceLevel): string {
   switch (chance) {
     case 'high': return 'High Chance';
@@ -39,13 +31,7 @@ export function getChanceLabel(chance: ChanceLevel): string {
   }
 }
 
-// ============================================
-// Cutoff Functions
-// ============================================
 
-/**
- * Bulk create cutoffs using MongoDB insertMany for performance
- */
 export async function bulkCreateCutoffs(
   cutoffs: Omit<CollegeRankCutoff, 'id' | 'createdAt'>[]
 ): Promise<number> {
@@ -53,12 +39,10 @@ export async function bulkCreateCutoffs(
   if (cutoffs.length === 0) return 0;
   
   try {
-    // Use the native MongoDB collection for a faster, more reliable bulk insert
     const collection = CollegeCutoffModel.collection;
     const result = await collection.insertMany(cutoffs, { ordered: false });
     return result.insertedCount || 0;
   } catch (error: any) {
-    // If it's a bulk write error, check how many were actually inserted
     if (error.result && error.result.insertedCount) {
       console.log(`DEBUG: Bulk write had partial success: ${error.result.insertedCount} inserted.`);
       return error.result.insertedCount;
@@ -68,10 +52,7 @@ export async function bulkCreateCutoffs(
   }
 }
 
-/**
- * Bulk upsert cutoffs using MongoDB bulkWrite
- * This is more efficient for updates + inserts
- */
+
 export async function bulkUpsertCutoffs(
   operations: any[]
 ): Promise<{ insertedCount: number; modifiedCount: number; upsertedCount: number }> {
@@ -91,7 +72,6 @@ export async function bulkUpsertCutoffs(
     };
   } catch (error: any) {
     console.error('DEBUG: Bulk write failed:', error);
-    // Even if it failed, some might have succeeded
     if (error.result) {
       return {
         insertedCount: error.result.insertedCount || 0,
@@ -103,9 +83,6 @@ export async function bulkUpsertCutoffs(
   }
 }
 
-// ============================================
-// Constants and Mappings
-// ============================================
 
 const CATEGORY_MAPPING: Record<string, string[] | RegExp> = {
   general: ['GM', 'GMH', 'GMK', 'GMKH', 'GMR', 'GMRH', 'OPN'],
@@ -121,18 +98,14 @@ const QUOTA_MAPPING: Record<string, string[]> = {
   deemed: ['AIQ', 'DEEMED', 'PAID', 'NRI', 'ALL INDIA QUOTA', 'MANAGEMENT', 'MNG'],
 };
 
-/**
- * Delete all cutoffs for a specific year
- */
+
 export async function deleteCutoffsByYear(year: number): Promise<number> {
   await dbConnect();
   const res = await CollegeCutoffModel.deleteMany({ year });
   return res.deletedCount || 0;
 }
 
-/**
- * Get eligible colleges for a student based on their rank
- */
+
 export async function getEligibleColleges(options: {
   studentRank: number;
   courseName: string;
@@ -146,12 +119,9 @@ export async function getEligibleColleges(options: {
 }): Promise<{ primary: CollegeWithChance[]; others: CollegeWithChance[] }> {
   await dbConnect();
 
-  // Normalize inputs
   const categorySearch = options.category.toLowerCase();
   const counsellingType = options.counsellingType.toLowerCase();
   const tab = options.tab?.toLowerCase() || '';
-
-  // Tab-to-Quota Mapping
   let quotaFilter: string[] | null = null;
 
   if (counsellingType === 'state') {
@@ -161,26 +131,20 @@ export async function getEligibleColleges(options: {
     else if (tab === 'nri') quotaFilter = ['NRI', 'NRI QUOTA', 'N'];
     else quotaFilter = ['GOVT', 'GOVERNMENT', 'PRIV', 'PRIVATE', 'OTHERS', 'MGMT', 'MANAGEMENT', 'MNG', 'NRI'];
   } else {
-    // all_india mode
     if (tab === 'aiq') quotaFilter = ['AIQ', 'ALL INDIA', 'ALL INDIA QUOTA'];
     else if (tab === 'paid') quotaFilter = ['DEEMED', 'PAID', 'MNG', 'OTHERS', 'MANAGEMENT', 'DEEMED UNIVERSITY'];
     else if (tab === 'nri') quotaFilter = ['NRI', 'NRI QUOTA'];
     else quotaFilter = QUOTA_MAPPING['all_india'];
   }
 
-  // Get mapped category filter
   let categoryFilter: string | string[] | RegExp = CATEGORY_MAPPING[categorySearch] || options.category;
 
-  // Broaden category for NRI and Management tabs as these are typically open to all categories
   if (tab === 'nri' || tab === 'management') {
     categoryFilter = /.*/; 
   }
 
-  // Year fallback: if no data for requested year, get the latest year available for this specific
-  // course + category + quota context (tab-aware), not just category.
   let targetYear = options.year;
 
-  // Use a flexible query for the initial check to account for mapping
   const checkQuery: any = {
     year: targetYear,
     courseName: { $regex: new RegExp(`^${options.courseName}$`, 'i') },
@@ -222,7 +186,6 @@ export async function getEligibleColleges(options: {
     rank: { $gte: options.studentRank },
   };
 
-  // Apply mapped category filter
   if (categoryFilter instanceof RegExp) {
     query.category = categoryFilter;
   } else if (Array.isArray(categoryFilter)) {
@@ -231,7 +194,6 @@ export async function getEligibleColleges(options: {
     query.category = new RegExp(`^${categoryFilter}$`, 'i');
   }
 
-  // Apply mapped quota filter
   if (quotaFilter) {
     if (Array.isArray(quotaFilter)) {
       query.quota = { $in: quotaFilter.map(q => new RegExp(`^${q}$`, 'i')) };
@@ -253,7 +215,6 @@ export async function getEligibleColleges(options: {
     .sort({ rank: 1 })
     .limit(100);
 
-  // If we have location constraints and found few results, try without location constraints
   if (docs.length < 20 && options.locations && options.locations.length > 0) {
     docs = await CollegeCutoffModel.find(query)
       .sort({ rank: 1 })
@@ -294,9 +255,7 @@ export async function getEligibleColleges(options: {
   return { primary, others };
 }
 
-/**
- * Get previous year cutoffs for a student's rank
- */
+
 interface PreviousYearCutoffs {
   colleges: CollegeWithChance[];
   otherColleges: CollegeWithChance[];
@@ -321,7 +280,7 @@ export async function getPreviousYearCutoffs(options: {
       courseName: options.courseName,
       category: options.category,
       year,
-      counsellingType: 'state', // Default for prev year view or handle via options
+      counsellingType: 'state', 
       collegeType: options.collegeType,
       locations: options.locations,
       disableYearFallback: true,
@@ -333,27 +292,20 @@ export async function getPreviousYearCutoffs(options: {
   return results;
 }
 
-/**
- * Get cutoffs by year for admin view
- */
+
 export async function getCutoffsByYear(year: number): Promise<CollegeRankCutoff[]> {
   await dbConnect();
   const docs = await CollegeCutoffModel.find({ year }).lean();
   return docs as unknown as CollegeRankCutoff[];
 }
 
-/**
- * Get distinct years available in the cutoffs data
- */
+
 export async function getAvailableYears(): Promise<number[]> {
   await dbConnect();
   const years = await CollegeCutoffModel.distinct('year');
   return years.sort((a, b) => b - a);
 }
 
-// ============================================
-// Location Functions
-// ============================================
 
 export interface Location {
   id: string;
@@ -361,16 +313,11 @@ export interface Location {
   isActive: boolean;
 }
 
-/**
- * Sync locations - Deprecated in MongoDB as distinct aggregations handle this transparently
- */
 export async function syncLocations(locationNames: string[]): Promise<number> {
   return locationNames.length;
 }
 
-/**
- * Get all active locations using native distinct querying
- */
+
 export async function getLocations(): Promise<Location[]> {
   await dbConnect();
   const rawLocations = await CollegeCutoffModel.distinct('collegeLocation');
@@ -384,9 +331,6 @@ export async function getLocations(): Promise<Location[]> {
     }));
 }
 
-// ============================================
-// Course Functions
-// ============================================
 
 export interface Course {
   id: string;
@@ -394,16 +338,11 @@ export interface Course {
   isActive: boolean;
 }
 
-/**
- * Sync courses - Deprecated in MongoDB as distinct aggregations handle this transparently
- */
 export async function syncCourses(courseNames: string[]): Promise<number> {
   return courseNames.length;
 }
 
-/**
- * Get all active courses using native distinct querying
- */
+
 export async function getCourses(): Promise<Course[]> {
   await dbConnect();
   const rawCourses = await CollegeCutoffModel.distinct('courseName');

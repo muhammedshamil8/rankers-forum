@@ -8,7 +8,6 @@ import {
 import { bulkCreateCutoffs, bulkUpsertCutoffs, getCutoffsByYear, syncCourses, syncLocations } from './colleges';
 import { cleanCommas } from '@/lib/utils';
 
-// Expected column headers in the Excel file
 const EXPECTED_COLUMNS = [
   'All India Rank',
   'Quota',
@@ -48,9 +47,7 @@ interface NormalizedCutoff {
   year: number;
 }
 
-/**
- * Validate Excel row
- */
+
 function validateRow(row: Record<string, unknown>, rowIndex: number): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
@@ -82,9 +79,6 @@ function validateRow(row: Record<string, unknown>, rowIndex: number): { valid: b
 
 
 
-/**
- * Normalize Excel data in memory - takes LAST occurrence for each unique combination
- */
 function normalizeExcelData(rows: any[], year: number): NormalizedCutoff[] {
   const map = new Map<string, NormalizedCutoff>();
 
@@ -96,17 +90,11 @@ function normalizeExcelData(rows: any[], year: number): NormalizedCutoff[] {
     
     if (!collegeName || !courseName) continue;
 
-    // Create unique key for deduplication (Name + Course + Category + Quota)
-    // Quota is essential here because a college can have different ranks for different seat types
     const rawQuota = (row['Quota'] || '').toString().trim() || '';
     const key = `${collegeName}|${courseName}|${category}|${rawQuota}`;
-
-    // Always overwrite with later row (last wins)
     const city = cleanCommas((row['City'] || '').toString());
     const state = cleanCommas((row['State'] || '').toString());
     
-    // Normalize college type based on instructions:
-    // 'government' (govt), 'private', 'deemed' (private university)
     const rawType = (row['College Type'] || row['collegeType'] || '').toString().trim().toLowerCase();
     let normalizedType = rawType;
     
@@ -136,9 +124,7 @@ function normalizeExcelData(rows: any[], year: number): NormalizedCutoff[] {
   return Array.from(map.values());
 }
 
-/**
- * Extract unique locations from rows
- */
+
 function extractLocations(rows: ExcelRow[]): string[] {
   const locations = new Set<string>();
 
@@ -155,9 +141,7 @@ function extractLocations(rows: ExcelRow[]): string[] {
   return Array.from(locations);
 }
 
-/**
- * Extract unique courses from rows
- */
+
 function extractCourses(rows: ExcelRow[]): string[] {
   const courses = new Set<string>();
 
@@ -191,9 +175,7 @@ function mapLog(doc: any): ExcelUploadLog {
   } as ExcelUploadLog;
 }
 
-/**
- * Create upload log
- */
+
 export async function createUploadLog(
   uploadedBy: string,
   year: number,
@@ -217,9 +199,7 @@ export async function createUploadLog(
   return mapLog(log);
 }
 
-/**
- * Update upload log progress
- */
+
 export async function updateUploadLog(
   id: string,
   data: Partial<ExcelUploadLog>
@@ -228,16 +208,13 @@ export async function updateUploadLog(
   await UploadLogModel.findByIdAndUpdate(id, data);
 }
 
-/**
- * Process Excel file for college data upload - OPTIMIZED with bulk operations
- */
+
 export async function processExcelUpload(
   buffer: Buffer,
   uploadedBy: string,
   fileName: string,
   year: number
 ): Promise<ExcelUploadLog> {
-  // Parse Excel file
   const workbook = XLSX.read(buffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
@@ -247,7 +224,6 @@ export async function processExcelUpload(
     throw new Error('Excel file is empty');
   }
 
-  // Validate headers (Case-insensitive and trim spaces)
   const firstRow = rows[0];
   const actualHeaders = Object.keys(firstRow).map(h => h.trim().toLowerCase());
   const missingColumns = EXPECTED_COLUMNS.filter(col => {
@@ -256,11 +232,9 @@ export async function processExcelUpload(
   });
 
   if (missingColumns.length > 0) {
-    // Try to find the closest match for the error message
     throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
   }
 
-  // Create a mapping of expected columns to actual header keys found in the file
   const headerMap: Record<string, string> = {};
   const actualKeys = Object.keys(firstRow);
   EXPECTED_COLUMNS.forEach(col => {
@@ -271,7 +245,6 @@ export async function processExcelUpload(
     }
   });
 
-  // Create upload log
   let uploadLog = await createUploadLog(uploadedBy, year, fileName, rows.length);
 
   const errorLog: string[] = [];
@@ -279,17 +252,13 @@ export async function processExcelUpload(
   let failedRows = 0;
 
   try {
-    // Step 1: Validate all rows using the headerMap
     for (let i = 0; i < rows.length; i++) {
       const rawRow = rows[i] as any;
       const rowIndex = i + 2;
-
-      // Remap raw row keys to expected column names for validation and normalization
       const mappedRow: any = {};
       EXPECTED_COLUMNS.forEach(col => {
         mappedRow[col] = rawRow[headerMap[col]];
       });
-      // Add SI No if it exists
       if (rawRow['SI No']) mappedRow['SI No'] = rawRow['SI No'];
       if (rawRow['SI. No']) mappedRow['SI No'] = rawRow['SI. No'];
       if (rawRow['S.No']) mappedRow['SI No'] = rawRow['S.No'];
@@ -312,16 +281,12 @@ export async function processExcelUpload(
     console.log(`DEBUG: Failed validation: ${failedRows}`);
     console.log(`DEBUG: Valid rows for processing: ${validRows.length}`);
 
-    // Step 2: Normalize data (deduplicate within the Excel file itself)
     const normalizedData = normalizeExcelData(validRows, year);
     console.log(`DEBUG: Rows after Excel deduplication: ${normalizedData.length}`);
 
-    // Step 3: Extract unique locations and courses for legacy sync triggers
     const locations = extractLocations(rows);
     const courses = extractCourses(rows);
 
-    // Step 4: Build Bulk Upsert Operations
-    // We use Name + Course + Category + Year + Quota as the unique filter
     const bulkOps = normalizedData.map(item => ({
       updateOne: {
         filter: { 
@@ -340,7 +305,6 @@ export async function processExcelUpload(
     let updatedCount = 0;
     let upsertedCount = 0;
 
-    // Step 5: Execute bulk write
     if (bulkOps.length > 0) {
       const result = await bulkUpsertCutoffs(bulkOps);
       insertedCount = result.insertedCount;
@@ -349,11 +313,9 @@ export async function processExcelUpload(
       console.log(`DEBUG: bulkWrite Result: Inserted=${insertedCount}, Modified=${updatedCount}, Upserted=${upsertedCount}`);
     }
 
-    // Step 6: Sync legacy collections
     await syncLocations(locations);
     await syncCourses(courses);
 
-    // Final update to the upload log
     const updateData = {
       processedRows: normalizedData.length,
       insertedCount: insertedCount + upsertedCount,
@@ -381,9 +343,6 @@ export async function processExcelUpload(
   }
 }
 
-/**
- * Get upload logs with optional filters
- */
 export async function getUploadLogs(options: {
   year?: number;
   status?: ExcelUploadLog['status'];
@@ -411,9 +370,6 @@ export async function getUploadLogs(options: {
   return logs.map(mapLog);
 }
 
-/**
- * Get upload log by ID
- */
 export async function getUploadLogById(id: string): Promise<ExcelUploadLog | null> {
   await dbConnect();
   

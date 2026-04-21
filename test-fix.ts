@@ -5,7 +5,6 @@ async function testFix() {
   await dbConnect();
   console.log('Connected to DB');
 
-  // Test case: Rank 6005, Category: obc, Quota: all_india, Course: MBBS, Year: 2025
   const options = {
     studentRank: 6005,
     courseName: 'MBBS',

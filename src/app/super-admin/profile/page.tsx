@@ -48,11 +48,9 @@ export default function ProfilePage() {
     }
   }, [authLoading, isAuthorized, router]);
 
-  // Combine user and admin profile data
   const profile: AdminProfile = {
     ...profileData?.user,
     ...profileData?.adminProfile,
-    // Format dates specifically
     dateOfBirth: profileData?.adminProfile?.dateOfBirth?._seconds
       ? new Date(profileData.adminProfile.dateOfBirth._seconds * 1000).toLocaleDateString('en-IN')
       : profileData?.adminProfile?.dateOfBirth || '-',

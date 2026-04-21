@@ -16,8 +16,8 @@ export default function StudentLayout({
             <Navbar
                 user={user}
                 loading={loading}
-                onLoginClick={() => window.location.href = '/'} // Redirect to home if clicking login
-                onRegisterClick={() => window.location.href = '/'} // Redirect to home if clicking register
+                onLoginClick={() => window.location.href = '/'} 
+                onRegisterClick={() => window.location.href = '/'} 
             />
             <main className="flex-1 mt-20">
                 {children}

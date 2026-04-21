@@ -20,7 +20,7 @@ const superAdminLinks = [
   { href: '/super-admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/super-admin/students', label: 'Students', icon: Users },
   { href: '/super-admin/colleges', label: 'College', icon: Building2 },
-  { href: '/super-admin/referral-codes', label: 'Referral Codes', icon: GraduationCap }, // Using GraduationCap as a temporary suitable icon 
+  { href: '/super-admin/referral-codes', label: 'Referral Codes', icon: GraduationCap }, 
   { href: '/super-admin/admins', label: 'Admin', icon: UserCog },
   { href: '/super-admin/profile', label: 'Profile', icon: UserCircle },
 ];

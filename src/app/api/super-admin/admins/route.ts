@@ -3,9 +3,7 @@ import { adminAuth } from '@/lib/firebase/admin';
 import { getUserById } from '@/lib/services/users';
 import { getAllAdmins, getAvailableAdmins, createAdmin, deactivateAdmin, activateAdmin } from '@/lib/services/admins';
 
-/**
- * Helper to verify super admin session
- */
+
 async function verifySuperAdminSession(request: NextRequest): Promise<string | null> {
   const sessionCookie = request.cookies.get('session')?.value;
   
@@ -27,10 +25,7 @@ async function verifySuperAdminSession(request: NextRequest): Promise<string | n
   }
 }
 
-/**
- * GET /api/super-admin/admins - Get all admins
- * Query params: available (optional) - filter by availability
- */
+
 export async function GET(request: NextRequest) {
   try {
     const superAdminUid = await verifySuperAdminSession(request);
@@ -55,9 +50,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST /api/super-admin/admins - Create a new admin
- */
+
 export async function POST(request: NextRequest) {
   try {
     const superAdminUid = await verifySuperAdminSession(request);
@@ -79,7 +72,6 @@ export async function POST(request: NextRequest) {
       maxActiveLeads,
     } = body;
 
-    // Validate required fields
     if (!firstName || !lastName || !email || !phone || !password || !employeeNumber) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
@@ -117,9 +109,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * PATCH /api/super-admin/admins - Update admin status
- */
+
 export async function PATCH(request: NextRequest) {
   try {
     const superAdminUid = await verifySuperAdminSession(request);
@@ -135,7 +125,6 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Admin ID required' }, { status: 400 });
     }
 
-    // Handle both isActive boolean and action string formats
     if (typeof isActive === 'boolean') {
       if (isActive) {
         await activateAdmin(adminId);

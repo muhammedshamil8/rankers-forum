@@ -61,7 +61,6 @@ export function LoginModal({
       
       let email = data.identifier;
       
-      // If the identifier doesn't look like an email, try looking it up as a phone number
       if (!email.includes('@')) {
         try {
           const response = await fetch(`/api/auth/lookup?identifier=${encodeURIComponent(data.identifier)}`);
@@ -83,13 +82,11 @@ export function LoginModal({
 
       onOpenChange(false);
       
-      // Delay redirection slightly to allow modal closing animation
       setTimeout(() => {
         const redirectUrl = getRedirectUrl(user);
         router.push(redirectUrl);
       }, 50);
     } catch {
-      // Error is handled by useAuthActions
     }
   };
 
@@ -104,13 +101,11 @@ export function LoginModal({
       setIsRedirecting(true);
       onOpenChange(false);
 
-      // Delay for smoothness
       setTimeout(() => {
         const redirectUrl = getRedirectUrl(user);
         router.push(redirectUrl);
       }, 50);
     } catch {
-      // Error is handled by useAuthActions
     } finally {
       setGoogleLoading(false);
     }

@@ -16,9 +16,7 @@ export interface User {
   hasStudentProfile?: boolean;
 }
 
-/**
- * Get the redirect URL based on user role and profile status
- */
+
 export function getRedirectUrl(user: User): string {
   switch (user.role) {
     case 'student':
@@ -58,7 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(null);
         return data.user;
       } else {
-        // If 401, maybe the cookie isn't ready yet? (Rare race condition fix)
         setUser(null);
         if (response.status !== 401) {
           setError('Failed to fetch user');
@@ -82,8 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setFirebaseUser(firebaseUser);
-        // Only establish session if we don't already have a valid user
-        // and we aren't already in the middle of logging in
         if (!user && !isEstablishingSession) {
           try {
             setIsEstablishingSession(true);
@@ -123,7 +118,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [user, isEstablishingSession]);
 
-  // Also check session on mount
   useEffect(() => {
     fetchUser();
   }, []);

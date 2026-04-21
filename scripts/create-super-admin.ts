@@ -17,10 +17,8 @@ import mongoose from 'mongoose';
 import { UserModel } from '../src/models/User';
 import { AdminProfileModel } from '../src/models/AdminProfile';
 
-// Load environment variables
 dotenv.config({ path: '.env.local' });
 
-// Initialize Firebase Admin
 function initFirebase() {
   if (getApps().length > 0) {
     return;
@@ -70,7 +68,6 @@ async function createSuperAdmin() {
 
   await mongoose.connect(process.env.MONGODB_URI);
 
-  // Get user input
   const email = await prompt('Email: ');
   const password = await prompt('Password (min 6 chars): ');
   const firstName = await prompt('First Name: ');
@@ -90,7 +87,6 @@ async function createSuperAdmin() {
   try {
     console.log('\n⏳ Creating super admin...');
 
-    // Create Firebase Auth user
     const userRecord = await auth.createUser({
       email,
       password,
@@ -99,7 +95,6 @@ async function createSuperAdmin() {
 
     console.log(`✅ Firebase Auth user created: ${userRecord.uid}`);
 
-    // Create user document in MongoDB
     await UserModel.create({
       _id: userRecord.uid,
       role: 'super_admin',
@@ -115,7 +110,6 @@ async function createSuperAdmin() {
 
     console.log('✅ User document created in MongoDB');
 
-    // Create admin profile
     await AdminProfileModel.create({
       userId: userRecord.uid,
       employeeNumber: 'SA001',

@@ -72,11 +72,9 @@ function SuperAdminCallbacksContent() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selectedAdminId, setSelectedAdminId] = useState('');
 
-  // Check for assign parameter
   useEffect(() => {
     const assignId = searchParams.get('assign');
     if (assignId) {
-      // Fetch lead and open assign modal
       fetch(`/api/admin/leads/${assignId}`)
         .then(res => res.json())
         .then(data => {
@@ -88,7 +86,6 @@ function SuperAdminCallbacksContent() {
     }
   }, [searchParams]);
 
-  // Fetch unassigned leads
   const { data: leadsData, isLoading } = useQuery({
     queryKey: ['super-admin-callbacks', statusFilter],
     queryFn: async () => {
@@ -101,7 +98,6 @@ function SuperAdminCallbacksContent() {
     enabled: !!isAuthorized,
   });
 
-  // Fetch available admins
   const { data: adminsData } = useQuery({
     queryKey: ['available-admins'],
     queryFn: async () => {
@@ -112,7 +108,6 @@ function SuperAdminCallbacksContent() {
     enabled: !!isAuthorized && assignModalOpen,
   });
 
-  // Assign lead mutation
   const [assignError, setAssignError] = useState<string | null>(null);
 
   const assignMutation = useMutation({

@@ -4,9 +4,7 @@ import { getUserById } from '@/lib/services/users';
 import { getDashboardStats } from '@/lib/services/stats';
 import { getAdminPendingCallbacks } from '@/lib/services/leads';
 
-/**
- * Helper to verify admin session
- */
+
 async function verifyAdminSession(request: NextRequest): Promise<{ uid: string; role: string } | null> {
   const sessionCookie = request.cookies.get('session')?.value;
   
@@ -28,9 +26,7 @@ async function verifyAdminSession(request: NextRequest): Promise<{ uid: string; 
   }
 }
 
-/**
- * GET /api/admin/dashboard - Get dashboard data
- */
+
 export async function GET(request: NextRequest) {
   try {
     const session = await verifyAdminSession(request);
@@ -39,10 +35,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get global stats (for super admin)
     const stats = await getDashboardStats();
 
-    // Get admin's pending callbacks
     const pendingCallbacks = await getAdminPendingCallbacks(session.uid);
 
     return NextResponse.json({

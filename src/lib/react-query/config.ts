@@ -4,7 +4,7 @@ export const queryClientConfig: QueryClientConfig = {
   defaultOptions: {
     queries: {
       staleTime: 60 * 1000, // 1 minute
-      gcTime: 5 * 60 * 1000, // 5 minutes (garbage collection time)
+      gcTime: 5 * 60 * 1000, // 5 minutes 
       retry: 3,
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       refetchOnWindowFocus: false,

@@ -5,18 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/**
- * Clean redundant commas and spaces from strings
- */
+
 export function cleanCommas(str: string | null | undefined): string {
   if (!str) return '';
   return str
     .toString()
-    .replace(/,+/g, ',')           // Replace multiple commas with one
-    .replace(/,\s*,/g, ',')        // Handle commas separated by space
-    .replace(/\s+,\s+/g, ', ')     // Normalize space around commas
-    .replace(/\s*,\s*/g, ', ')     // Ensure space after comma
-    .replace(/,\s*$/g, '')         // Remove trailing comma
-    .replace(/^\s*,/g, '')         // Remove leading comma
+    .replace(/,+/g, ',')           
+    .replace(/,\s*,/g, ',')        
+    .replace(/\s+,\s+/g, ', ')     
+    .replace(/\s*,\s*/g, ', ')     
+    .replace(/,\s*$/g, '')         
+    .replace(/^\s*,/g, '')         
     .trim();
 }

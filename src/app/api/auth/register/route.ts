@@ -37,14 +37,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create Firebase Auth user
     const userRecord = await adminAuth.createUser({
       email,
       password,
       displayName: `${firstName} ${lastName}`,
     });
 
-    // Create user document in MongoDB using updated service
     await createUser(userRecord.uid, {
       role: 'student',
       firstName,
@@ -55,11 +53,9 @@ export async function POST(request: NextRequest) {
       state,
     });
 
-    // Initialize stats if needed and increment registration count
     await initializeStats();
     await incrementStat('totalRegistrations');
 
-    // Create custom token for client-side auth
     const customToken = await adminAuth.createCustomToken(userRecord.uid);
 
     return NextResponse.json({

@@ -6,9 +6,7 @@ import { getLeads } from '@/lib/services/leads';
 import { incrementStat } from '@/lib/services/stats';
 import { LeadModel } from '@/models/Lead';
 
-/**
- * Helper to verify student session
- */
+
 async function verifyStudentSession(request: NextRequest): Promise<{ uid: string; user: ReturnType<typeof getUserById> extends Promise<infer T> ? T : never } | null> {
   const sessionCookie = request.cookies.get('session')?.value;
   
@@ -30,9 +28,7 @@ async function verifyStudentSession(request: NextRequest): Promise<{ uid: string
   }
 }
 
-/**
- * GET /api/students/callback - Get current student's callback request status
- */
+
 export async function GET(request: NextRequest) {
   try {
     const session = await verifyStudentSession(request);
@@ -41,7 +37,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if student has any callback request
     const leads = await getLeads();
 
     const studentLeads = leads.filter(lead => lead.studentId === session.uid);
@@ -65,9 +60,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST /api/students/callback - Create a callback request
- */
+
 export async function POST(request: NextRequest) {
   try {
     const session = await verifyStudentSession(request);
@@ -78,7 +71,6 @@ export async function POST(request: NextRequest) {
 
     const { uid, user } = session;
 
-    // Check if student has profile
     const student = await getStudentByUserId(uid);
     
     if (!student) {
@@ -88,7 +80,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if there's already a pending callback request
     const existingLead = await LeadModel.findOne({
       studentId: uid,
       callbackRequested: true,
@@ -102,13 +93,10 @@ export async function POST(request: NextRequest) {
       }, { status: 409 });
     }
 
-    // Extract student info with robust fallbacks
-    // User might have logged in with Google and not filled profile name
     const firstName = user?.firstName || '';
     const lastName = user?.lastName || '';
     let studentName = `${firstName} ${lastName}`.trim();
 
-    // Fallback to email prefix if name is truly missing
     if (!studentName) {
       studentName = user?.email?.split('@')[0] || 'Student';
     }
@@ -116,7 +104,6 @@ export async function POST(request: NextRequest) {
     const studentPhone = user?.phone || '';
     const studentEmail = user?.email || '';
     
-    // Logic for location: User city/state or Student domicile
     let studentLocation = '';
     if (user?.city && user?.state) {
       studentLocation = `${user.city}, ${user.state}`;
@@ -126,7 +113,6 @@ export async function POST(request: NextRequest) {
       studentLocation = student.domicileState;
     }
 
-    // Reuse the student's latest active lead when possible to avoid duplicates.
     let leadId: string | null = null;
 
     const updatedLead = await LeadModel.findOneAndUpdate(
@@ -153,7 +139,6 @@ export async function POST(request: NextRequest) {
     if (updatedLead) {
       leadId = updatedLead._id.toString();
     } else {
-      // If no active lead exists, create an idempotent pending callback lead.
       const pendingLead = await LeadModel.findOneAndUpdate(
         {
           studentId: uid,
@@ -183,7 +168,6 @@ export async function POST(request: NextRequest) {
       leadId = pendingLead._id.toString();
     }
 
-    // Update dashboard stats (totalRequests handled gracefully in createLead, callbacks explicitly here if tracked differently)
     await incrementStat('pendingCallbacks');
 
     return NextResponse.json({ 

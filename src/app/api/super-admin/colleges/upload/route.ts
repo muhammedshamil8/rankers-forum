@@ -3,9 +3,7 @@ import { adminAuth } from '@/lib/firebase/admin';
 import { getUserById } from '@/lib/services/users';
 import { processExcelUpload, getUploadLogs } from '@/lib/services/uploads';
 
-/**
- * Helper to verify super admin session
- */
+
 async function verifySuperAdminSession(request: NextRequest): Promise<string | null> {
   const sessionCookie = request.cookies.get('session')?.value;
   
@@ -27,9 +25,7 @@ async function verifySuperAdminSession(request: NextRequest): Promise<string | n
   }
 }
 
-/**
- * GET /api/super-admin/colleges/upload - Get upload history
- */
+
 export async function GET(request: NextRequest) {
   try {
     const superAdminUid = await verifySuperAdminSession(request);
@@ -54,9 +50,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST /api/super-admin/colleges/upload - Upload Excel file
- */
+
 export async function POST(request: NextRequest) {
   try {
     const superAdminUid = await verifySuperAdminSession(request);
@@ -77,16 +71,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid year provided' }, { status: 400 });
     }
 
-    // Validate file type
     if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
       return NextResponse.json({ error: 'Invalid file type. Upload .xlsx or .xls' }, { status: 400 });
     }
-
-    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Process the upload
     const result = await processExcelUpload(buffer, superAdminUid, file.name, year);
 
     return NextResponse.json({
@@ -96,7 +86,7 @@ export async function POST(request: NextRequest) {
       processedRows: result.processedRows,
       failedRows: result.failedRows,
       status: result.status,
-      errors: result.errorLog.slice(0, 10), // Return first 10 errors
+      errors: result.errorLog.slice(0, 10), 
     });
   } catch (error) {
     console.error('Excel upload error:', error);

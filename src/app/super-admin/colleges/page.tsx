@@ -47,15 +47,14 @@ export default function CollegePage() {
 
   const handleYearChange = (year: number) => {
     setSelectedYear(year);
-    setCurrentPage(1); // Reset to first page when year changes
-    setSearchQuery(''); // Clear search when year changes
-    // Invalidate and refetch the query for the new year
+    setCurrentPage(1); 
+    setSearchQuery(''); 
     queryClient.invalidateQueries({ queryKey: ['colleges', year] });
   };
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    setCurrentPage(1); // Reset to first page when search changes
+    setCurrentPage(1); 
   };
 
   useEffect(() => {
@@ -66,7 +65,6 @@ export default function CollegePage() {
 
   const colleges: College[] = collegesData?.cutoffs || [];
   
-  // Filter colleges based on search query
   const filteredColleges = colleges.filter((college) => {
     if (!searchQuery.trim()) return true;
     
@@ -79,7 +77,6 @@ export default function CollegePage() {
     );
   });
   
-  // Pagination calculations
   const totalItems = filteredColleges.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
