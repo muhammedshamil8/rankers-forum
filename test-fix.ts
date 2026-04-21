@@ -9,7 +9,7 @@ async function testFix() {
     studentRank: 6005,
     courseName: 'MBBS',
     category: 'obc',
-    quota: 'all_india',
+    counsellingType: 'all_india',
     year: 2025
   };
 
