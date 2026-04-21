@@ -150,7 +150,6 @@ export default function PreviousYearPage() {
   return (
     <div className="min-h-screen bg-white">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Title and Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl sm:text-[26px] font-medium text-slate-900">Previous Year Predictions</h1>
@@ -178,7 +177,6 @@ export default function PreviousYearPage() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex border w-fit rounded-[8px] p-1 gap-2 mb-6">
           {[
             { value: 'government', label: 'Government' },
@@ -198,10 +196,8 @@ export default function PreviousYearPage() {
           ))}
         </div>
 
-        {/* Description */}
         <p className="text-slate-600 text-sm mb-6">Previous Year (Colleges you would have gotten with your current rank)</p>
 
-        {/* Loading State */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
@@ -210,10 +206,8 @@ export default function PreviousYearPage() {
           <div className="space-y-8">
             {years.map((year) => (
               <div key={year} className='border-l-4 rounded-[8px] border-[#4B5563] pl-3 md:pl-5 py-2'>
-                {/* Year Header */}
                 <h3 className=" text-[#1E1E1E] mb-4">{year}</h3>
 
-                {/* College List */}
                 <div className="space-y-2">
                   {collegesByYear[year].map((college: College) => (
                     <div
@@ -222,15 +216,12 @@ export default function PreviousYearPage() {
                     >
                       <div className="grid gap-y-4 lg:grid-cols-2 p-3 md:p-5">
 
-                        {/* College Info */}
-
                         <div className="flex-1 flex justify-between  h-full ">
                           <div className='flex flex-col justify-center'>
 
                             <h3 className="font-semibold text-[#4B5563] text-sm">{college.collegeName?.replace(/,,/g, ',')}</h3>
                             <p className="text-[#4B5563] text-sm">{college.collegeLocation?.replace(/,,/g, ',')}</p>
                           </div>
-                          {/* Actions */}
                           <div className="md:hidden flex flex-col items-center gap-2 ml-6">
                             {getChanceBadge(college.chance)}
                             <button
@@ -245,7 +236,6 @@ export default function PreviousYearPage() {
                         </div>
 
                         <div className='flex items-center  h-full justify-between'>
-                          {/* Details Grid */}
                           <div className=" h-full  grid grid-cols-4 gap-1 md:gap-3 
                           text-center">
                             <div className='bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full'>
@@ -266,7 +256,6 @@ export default function PreviousYearPage() {
                             </div>
                           </div>
 
-                          {/* Actions */}
                           <div className="hidden md:flex flex-col items-center gap-2 ml-6">
                             {getChanceBadge(college.chance)}
                             {/* <button
@@ -281,7 +270,6 @@ export default function PreviousYearPage() {
                         </div>
                       </div>
 
-                      {/* Expanded Details */}
                       {expandedCollege === college.id && (
                         <div className="border-t border-slate-100 p-5 bg-slate-50">
                           <div className="grid sm:grid-cols-4 gap-4 text-sm">
@@ -317,7 +305,6 @@ export default function PreviousYearPage() {
           </div>
         )}
 
-        {/* Back Link */}
         <div className="mt-8">
           <button
             onClick={() => router.back()}

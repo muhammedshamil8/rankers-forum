@@ -5,7 +5,7 @@ import { getUserById } from '@/lib/services/users';
 import { getEligibleColleges } from '@/lib/services/colleges';
 import { createLead } from '@/lib/services/leads';
 import { CollegeType } from '@/types';
-import { CURRENT_YEAR } from '@/lib/constants';
+import { CURRENT_YEAR, MAX_COLLEGE_CHECKS } from '@/lib/constants';
 
 /**
  * Helper to verify session and get user ID
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     if (!canLookup) {
       return NextResponse.json(
-        { error: 'Maximum college checks reached (2/2)' },
+        { error: `Maximum college checks reached (${MAX_COLLEGE_CHECKS}/${MAX_COLLEGE_CHECKS}). Please contact support to increase your limit.` },
         { status: 403 }
       );
     }
@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const collegeType = searchParams.get('type') as CollegeType | null;
     const state = searchParams.get('state');
+    const tab = searchParams.get('tab') || undefined;
 
     // Get eligible colleges
     const { primary, others } = await getEligibleColleges({
@@ -73,10 +74,9 @@ export async function GET(request: NextRequest) {
       courseName: student.preferredBranch,
       category: student.category,
       year: CURRENT_YEAR - 1,
-      quota: student.counsellingType,
-      locations: [student.locationPreference1, student.locationPreference2, student.locationPreference3]
-      // collegeType: collegeType || undefined,
-      // state: state || undefined,
+      counsellingType: student.counsellingType,
+      tab,
+      locations: [student.locationPreference1, student.locationPreference2, student.locationPreference3].filter(Boolean),
     });
 
     // Only increment usage and create lead on first call (not on filtering)

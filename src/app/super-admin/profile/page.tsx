@@ -69,7 +69,6 @@ export default function ProfilePage() {
         </div>
       ) : (
         <>
-          {/* Profile Header */}
           <div className="bg-white flex items-center justify-center rounded-xl border border-slate-100 p-8 mb-2">
             <div className="flex items-center gap-6">
               <div className="w-24 h-24 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-3xl font-bold text-slate-600">
@@ -87,7 +86,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Personal Details */}
           <div className="bg-white rounded-xl border border-slate-100 p-8 mb-2">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-medium text-indigo-700">Personal Details</h3>
@@ -143,7 +141,6 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Job Details */}
           <div className="bg-white rounded-xl border border-slate-100 p-8">
             <h3 className=" font-medium text-indigo-700 mb-2">Job Details</h3>
 

@@ -169,7 +169,6 @@ export default function AdminLeadsPage() {
           <p className="text-slate-600">Manage your assigned callback requests</p>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-wrap gap-4">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -195,7 +194,6 @@ export default function AdminLeadsPage() {
           </Select>
         </div>
 
-        {/* Leads Table */}
         <Card>
           <CardContent className="p-0">
             {isLoading ? (
@@ -271,7 +269,6 @@ export default function AdminLeadsPage() {
         </Card>
       </div>
 
-      {/* Lead Details Modal */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -365,7 +362,6 @@ export default function AdminLeadsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Followup Modal */}
       <Dialog open={followupOpen} onOpenChange={setFollowupOpen}>
         <DialogContent>
           <DialogHeader>

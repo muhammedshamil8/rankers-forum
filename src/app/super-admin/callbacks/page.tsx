@@ -165,7 +165,6 @@ function SuperAdminCallbacksContent() {
           <p className="text-slate-600">Assign callback requests to admins</p>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-wrap gap-4">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -190,7 +189,6 @@ function SuperAdminCallbacksContent() {
           </Select>
         </div>
 
-        {/* Leads Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
@@ -256,7 +254,6 @@ function SuperAdminCallbacksContent() {
       </div>
       )}
 
-      {/* Assign Modal */}
       <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
         <DialogContent>
           <DialogHeader>

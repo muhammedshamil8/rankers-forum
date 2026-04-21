@@ -124,7 +124,6 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Year Selection */}
           <div className="space-y-2">
             <Label htmlFor="year">Select Year</Label>
             <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
@@ -141,7 +140,6 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
             </Select>
           </div>
 
-          {/* Upload Area */}
           <div
             className={`
               border-2 border-dashed rounded-xl p-12 text-center transition-colors
@@ -220,7 +218,6 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
             </div>
           )}
 
-          {/* Expected Format */}
           <div className="p-4 bg-slate-50 rounded-lg">
             <h4 className="font-medium text-slate-900 mb-2">Expected Excel Format</h4>
             <p className="text-sm text-slate-600 mb-3">
@@ -238,7 +235,6 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
             </p>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button
               variant="outline"

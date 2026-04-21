@@ -298,9 +298,7 @@ export default function StudentsPage() {
         </div>
       ) : (
         <>
-          {/* Tabs and Search Bar */}
           <div className="flex items-center justify-between gap-4 mb-6 flex-wrap print:hidden">
-            {/* Tabs */}
             <div className="flex gap-4">
               <button
                 onClick={() => handleTabChange('details')}
@@ -322,7 +320,6 @@ export default function StudentsPage() {
               </button>
             </div>
 
-            {/* Search Bar */}
             <div className="relative max-w-2xl w-full max-w-[450px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
@@ -339,7 +336,6 @@ export default function StudentsPage() {
         </>
       )}
 
-      {/* Print Only Title */}
       <div className="hidden print:block mb-8">
         <h2 className="text-2xl font-bold text-slate-900">
           {activeTab === 'details' ? 'Students List' : 'Callback Requests'}
@@ -347,7 +343,6 @@ export default function StudentsPage() {
         <p className="text-sm text-slate-500">Generated on {mounted ? new Date().toLocaleDateString() : '--/--/----'}</p>
       </div>
 
-      {/* Students Table */}
       {activeTab === 'details' && (
         <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
           <div className="overflow-x-auto">
@@ -427,7 +422,6 @@ export default function StudentsPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           <div className="print:hidden">
             {!studentsLoading && filteredStudents.length > 0 && (
               <Pagination
@@ -442,7 +436,6 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* Callback Requests Table */}
       {activeTab === 'callback' && (
         <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
           <div className="overflow-x-auto">
@@ -506,7 +499,6 @@ export default function StudentsPage() {
             </table>
           </div>
 
-          {/* Pagination */}
           <div className="print:hidden">
             {!leadsLoading && filteredLeads.length > 0 && (
               <Pagination
@@ -521,7 +513,6 @@ export default function StudentsPage() {
         </div>
       )}
 
-      {/* Student Details Modal */}
       <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -530,7 +521,6 @@ export default function StudentsPage() {
 
           {selectedStudent && (
             <div className="space-y-6">
-              {/* Basic and Academic Details */}
               <div>
                 <h3 className="text-indigo-700 font-semibold mb-4">Basic and Academic Details</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -577,7 +567,6 @@ export default function StudentsPage() {
                 </div>
               </div>
 
-              {/* Course and Location Preference */}
               <div>
                 <h3 className="text-indigo-700 font-semibold mb-4">Course and Location Preference</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -607,7 +596,6 @@ export default function StudentsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Assign Callback Modal */}
       <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
         <DialogContent className="sm:max-w-md">
           {selectedLead && (

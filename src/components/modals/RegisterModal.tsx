@@ -168,7 +168,6 @@ export function RegisterModal({
 
         {step === 1 ? (
           <form onSubmit={step1Form.handleSubmit(handleStep1Submit)} className="space-y-4">
-            {/* Phone Number */}
             <div className="space-y-2">
               <Label htmlFor="phone">Phone No.</Label>
               <Input
@@ -183,7 +182,6 @@ export function RegisterModal({
               )}
             </div>
 
-            {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email">Email id</Label>
               <Input
@@ -198,7 +196,6 @@ export function RegisterModal({
               )}
             </div>
 
-            {/* Full Name */}
             <div className="space-y-2">
               <Label>Full Name</Label>
               <div className="grid grid-cols-2 gap-3">
@@ -225,7 +222,6 @@ export function RegisterModal({
               </div>
             </div>
 
-            {/* Location */}
             <div className="space-y-2">
               <Label>Location</Label>
               <div className="grid grid-cols-2 gap-3">
@@ -319,7 +315,6 @@ export function RegisterModal({
           </form>
         ) : (
           <form onSubmit={step2Form.handleSubmit(handleStep2Submit)} className="space-y-5">
-            {/* Password */}
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -334,7 +329,6 @@ export function RegisterModal({
               )}
             </div>
 
-            {/* Confirm Password */}
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
               <Input

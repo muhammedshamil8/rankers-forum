@@ -63,10 +63,8 @@ export function Navbar({ user, loading, onLoginClick, onRegisterClick }: NavbarP
                         </div>
 
                         <div className="flex items-center md:gap-4 gap-2">
-                            {/* Phone button - opens modal for students, direct call for others */}
                             {user && user.role === 'student' ? (
                                 <div className="relative">
-                                    {/* Ripple animation for attention */}
                                     {!isCallbackPending && (
                                         <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20"></span>
                                     )}
@@ -111,7 +109,6 @@ export function Navbar({ user, loading, onLoginClick, onRegisterClick }: NavbarP
                 </div>
             </header>
 
-            {/* Callback Modal for students */}
             {user && user.role === 'student' && (
                 <CallbackModal
                     open={callbackModalOpen}

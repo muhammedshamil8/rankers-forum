@@ -185,7 +185,6 @@ export default function AdminDashboardPage() {
           <p className="text-slate-600">Welcome back! Here&apos;s your overview.</p>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
           {statCards.map((stat, index) => (
             <div key={index} className="bg-white rounded-xl p-6 border border-slate-100">
@@ -204,7 +203,6 @@ export default function AdminDashboardPage() {
           ))}
         </div>
 
-        {/* Recent Leads Table */}
         <div className="rounded-xl border-slate-100 overflow-hidden">
           <div className="py-3 border-b border-slate-100">
             <h2 className="text-lg font-medium text-slate-900">Assigned Callbacks</h2>

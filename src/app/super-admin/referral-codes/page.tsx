@@ -192,7 +192,6 @@ export default function ReferralCodesPage() {
         </>
       )}
 
-      {/* Create Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>

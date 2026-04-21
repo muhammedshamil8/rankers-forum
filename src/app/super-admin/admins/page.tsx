@@ -176,7 +176,6 @@ export default function AdminManagementPage() {
         </div>
       ) : (
         <>
-          {/* Admins Table */}
           <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -256,7 +255,6 @@ export default function AdminManagementPage() {
         </>
       )}
 
-      {/* Create Admin Modal */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -393,7 +391,6 @@ export default function AdminManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Admin Details Modal */}
       <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -405,7 +402,6 @@ export default function AdminManagementPage() {
 
           {selectedAdmin && (
             <div className="space-y-6">
-              {/* Basic Details */}
               <div>
                 <h3 className="text-indigo-700 font-semibold mb-4">Basic and Contact Details</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -428,7 +424,6 @@ export default function AdminManagementPage() {
                 </div>
               </div>
 
-              {/* Employment Details */}
               <div>
                 <h3 className="text-indigo-700 font-semibold mb-4">Employment Details</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -453,7 +448,6 @@ export default function AdminManagementPage() {
                 </div>
               </div>
 
-              {/* CRM/Lead Details */}
               <div>
                 <h3 className="text-indigo-700 font-semibold mb-4">Lead Management Stats</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -472,7 +466,6 @@ export default function AdminManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Assigned Leads Modal */}
       <Dialog open={leadsModalOpen} onOpenChange={setLeadsModalOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>

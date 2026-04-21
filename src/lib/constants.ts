@@ -20,9 +20,8 @@ export const GENDERS = [
 ] as const;
 
 export const COUNSELLING_TYPES = [
-  { value: 'all_india', label: 'All India Counselling' },
+  { value: 'all_india', label: 'All India/Deemed Counselling' },
   { value: 'state', label: 'State Counselling' },
-  { value: 'deemed', label: 'Deemed Counselling' },
 ] as const;
 
 // Alias for quota types
@@ -98,7 +97,7 @@ export const INDIAN_STATES = [
 // Business Rules
 // ============================================
 
-export const MAX_COLLEGE_CHECKS = 10;
+export const MAX_COLLEGE_CHECKS = 50;
 export const DEFAULT_MAX_ACTIVE_LEADS = 50;
 
 // ============================================

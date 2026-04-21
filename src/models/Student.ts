@@ -17,7 +17,7 @@ export interface IStudent extends Document {
   locationPreference3: string;
   checksUsed: number;
   isProfileComplete: boolean;
-  marks: number;
+  score: number;
   referralCode: string;
   createdAt: Date;
   updatedAt: Date;
@@ -39,10 +39,14 @@ const StudentSchema = new Schema<IStudent>(
     locationPreference3: { type: String, default: '' },
     checksUsed: { type: Number, default: 0 },
     isProfileComplete: { type: Boolean, default: true },
-    marks: { type: Number, default: 0 },
+    score: { type: Number, default: 0 },
     referralCode: { type: String, default: '' },
   },
   { timestamps: true }
 );
 
+// Force re-registration of the model to pick up schema changes in development
+if (process.env.NODE_ENV === 'development') {
+  delete (mongoose.models as any).Student;
+}
 export const StudentModel = mongoose.models.Student || mongoose.model<IStudent>('Student', StudentSchema);

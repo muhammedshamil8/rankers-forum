@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-      marks,
+      score,
       rank,
       yearOfPassing,
       category,
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
       // Students can only update certain fields, and only once (per UI warning)
       // For now, allow updates but in production might want to restrict this
       await updateStudent(uid, {
-        marks: marks ? parseInt(marks) : 0,
+        score: score ? parseInt(score.toString()) : 0,
         rank,
         yearOfPassing,
         category,
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     }
 
     const studentInput: CreateStudentInput = {
-      marks: marks ? parseInt(marks) : 0,
+      score: score ? parseInt(score.toString()) : 0,
       rank,
       yearOfPassing,
       category,

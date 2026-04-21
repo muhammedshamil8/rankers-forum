@@ -31,11 +31,11 @@ import { LogoutModal } from '@/components/modals';
 
 // Validation schemas for each step
 const basicDetailsSchema = Yup.object({
-  marks: Yup.number()
-    .typeError('Marks must be a number')
-    .min(0, 'Minimum marks is 0')
-    .max(720, 'Maximum marks is 720')
-    .required('Marks is required'),
+  score: Yup.number()
+    .typeError('Score must be a number')
+    .min(0, 'Minimum score is 0')
+    .max(720, 'Maximum score is 720')
+    .required('Neet Score is required'),
   rank: Yup.string()
     .required('NEET All India Rank is required')
     .matches(/^[0-9]+$/, 'Rank must be a valid number'),
@@ -94,7 +94,7 @@ export default function StudentInfoPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          marks: parseInt(data.marks),
+          score: parseInt(data.score),
           rank: parseInt(data.rank),
           yearOfPassing: parseInt(data.year),
           category: data.category,
@@ -130,7 +130,7 @@ export default function StudentInfoPage() {
   // Formik setup
   const formik = useFormik({
     initialValues: {
-      marks: student?.marks || '',
+      score: student?.score || '',
       rank: student?.rank?.toString() || '',
       institution: student?.institution || '',
       year: student?.yearOfPassing?.toString() || currentYear.toString(),
@@ -227,29 +227,24 @@ export default function StudentInfoPage() {
             </h2>
 
             <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
-              {/* Marks Field */}
-              <div ref={(el) => { fieldRefs.current['marks'] = el; }} className="space-y-2">
-                <Label className="text-slate-700">Marks <span className="text-red-500">*</span></Label>
-                {profileIsComplete ? (
-                  <div className="min-h-[100px] w-full rounded-lg border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-600">
-                    {formik.values.marks}
-                  </div>
-                ) : (
-                  <Textarea
-                    placeholder="Enter your marks"
-                    className={`min-h-[100px] resize-none border-slate-200 focus:border-indigo-500 ${formik.touched.marks && formik.errors.marks ? 'border-red-500' : ''}`}
-                    {...formik.getFieldProps('marks')}
-                  />
-                )}
-                {formik.touched.marks && formik.errors.marks && (
+              <div ref={(el) => { fieldRefs.current['score'] = el; }} className="space-y-2">
+                <Label htmlFor="score" className="text-slate-700">Neet Score<span className="text-red-500">*</span></Label>
+                <Input
+                  id="score"
+                  type="number"
+                placeholder="Enter your Neet score"
+                  className={`h-12 border-slate-200 focus:border-indigo-500 ${formik.touched.rank && formik.errors.rank ? 'border-red-500' : ''} ${profileIsComplete ? 'bg-slate-50/50 cursor-not-allowed opacity-100' : ''}`}
+                  {...formik.getFieldProps('score')}
+                  readOnly={profileIsComplete}
+                />
+                {formik.touched.score && formik.errors.score && (
                   <p className="text-sm text-red-500 flex items-center gap-1 mt-1 font-medium">
                     <AlertTriangle className="h-3 w-3" />
-                    {String(formik.errors.marks)}
+                    {String(formik.errors.score)}
                   </p>
                 )}
               </div>
 
-              {/* Rank Field */}
               <div ref={(el) => { fieldRefs.current['rank'] = el; }} className="space-y-2">
                 <Label htmlFor="rank" className="text-slate-700">NEET All India Rank <span className="text-red-500">*</span></Label>
                 <Input
@@ -268,7 +263,6 @@ export default function StudentInfoPage() {
                 )}
               </div>
 
-              {/* Institution Field */}
               <div ref={(el) => { fieldRefs.current['institution'] = el; }} className="space-y-2">
                 <Label htmlFor="institution" className="text-slate-700">12th Board Name</Label>
                 <Input
@@ -283,7 +277,6 @@ export default function StudentInfoPage() {
                 />
               </div>
 
-              {/* Year Field */}
               <div ref={(el) => { fieldRefs.current['year'] = el; }} className="space-y-2">
                 <Label className="text-slate-700">Passing out year <span className="text-red-500">*</span></Label>
                 {profileIsComplete ? (
@@ -304,7 +297,6 @@ export default function StudentInfoPage() {
                 )}
               </div>
 
-              {/* Domicile State Field */}
               <div ref={(el) => { fieldRefs.current['domicileState'] = el; }} className="space-y-2">
                 <Label className="text-slate-700">Domicile State</Label>
                 {profileIsComplete ? (
@@ -326,7 +318,6 @@ export default function StudentInfoPage() {
                 {!profileIsComplete && <p className="text-[10px] text-slate-500 italic">10 plus years of study (Optional)</p>}
               </div>
 
-              {/* Category Field */}
               <div ref={(el) => { fieldRefs.current['category'] = el; }} className="space-y-2">
                 <Label className="text-slate-700">Category <span className="text-red-500">*</span></Label>
                 {profileIsComplete ? (
@@ -347,7 +338,6 @@ export default function StudentInfoPage() {
                 )}
               </div>
 
-              {/* Gender Field */}
               <div ref={(el) => { fieldRefs.current['gender'] = el; }} className="space-y-2">
                 <Label className="text-slate-700">Gender <span className="text-red-500">*</span></Label>
                 {profileIsComplete ? (
@@ -368,7 +358,6 @@ export default function StudentInfoPage() {
                 )}
               </div>
 
-              {/* Referral Code Field */}
               <div ref={(el) => { fieldRefs.current['referralCode'] = el; }} className="space-y-2">
                 <Label className="text-slate-700">Referral Code</Label>
                 {profileIsComplete ? (

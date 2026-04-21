@@ -3,13 +3,12 @@ import { Twitter, Facebook, Instagram, Linkedin, Mail, Phone, MapPin } from 'luc
 import Image from 'next/image';
 
 export function Footer() {
-  const currentYear = 2026; // As per the image Requirement
+  const currentYear = 2026; 
 
   return (
     <footer className="bg-linear-to-r from-[#2F129B] to-[#3B82F6] text-white py-10 font-sans overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
-          {/* Brand and Description */}
           <div className="space-y-6 lg:col-span-2">
             <div className="flex items-center gap-3">
               <Image src="/logo.svg" alt="Logo"
@@ -36,7 +35,6 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Navigation */}
           <div>
             <h3 className="text-lg font-semibold mb-6">Navigation</h3>
             <ul className="text-sm md:text-[15px] space-y-4 text-blue-100/90">
@@ -47,7 +45,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Legal */}
           <div>
             <h3 className="text-lg font-semibold mb-6">Legal</h3>
             <ul className="text-sm md:text-[15px] space-y-4 text-blue-100/90">
@@ -57,7 +54,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Contact & Support */}
           <div>
             <h3 className="text-lg font-semibold mb-6">Contact & Support</h3>
             <div className="text-sm md:text-[15px] space-y-4 text-blue-100/90 text-[15px] leading-relaxed">

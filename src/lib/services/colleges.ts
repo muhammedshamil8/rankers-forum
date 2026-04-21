@@ -138,18 +138,36 @@ export async function getEligibleColleges(options: {
   courseName: string;
   category: string;
   year: number;
-  quota?: string;
+  counsellingType: 'state' | 'all_india' | string;
+  tab?: string;
   collegeType?: CollegeType;
   locations?: string[];
   disableYearFallback?: boolean;
 }): Promise<{ primary: CollegeWithChance[]; others: CollegeWithChance[] }> {
   // Normalize inputs
   const categorySearch = options.category.toLowerCase();
-  const quotaSearch = options.quota?.toLowerCase() || '';
+  const counsellingType = options.counsellingType.toLowerCase();
+  const tab = options.tab?.toLowerCase() || '';
 
-  // Get mapped filters
+  // Tab-to-Quota Mapping
+  let quotaFilter: string[] | null = null;
+
+  if (counsellingType === 'state') {
+    if (tab === 'government') quotaFilter = ['GOVT', 'GOVERNMENT', 'G'];
+    else if (tab === 'private') quotaFilter = ['PRIV', 'PRIVATE', 'PVT', 'P'];
+    else if (tab === 'management') quotaFilter = ['OTHERS', 'MGMT', 'MANAGEMENT', 'MNG', 'OTHER', 'MQ', 'M'];
+    else if (tab === 'nri') quotaFilter = ['NRI', 'NRI QUOTA', 'N'];
+    else quotaFilter = ['GOVT', 'GOVERNMENT', 'PRIV', 'PRIVATE', 'OTHERS', 'MGMT', 'MANAGEMENT', 'MNG', 'NRI'];
+  } else {
+    // all_india mode
+    if (tab === 'aiq') quotaFilter = ['AIQ', 'ALL INDIA', 'ALL INDIA QUOTA'];
+    else if (tab === 'paid') quotaFilter = ['DEEMED', 'PAID', 'MNG', 'OTHERS', 'MANAGEMENT', 'DEEMED UNIVERSITY'];
+    else if (tab === 'nri') quotaFilter = ['NRI', 'NRI QUOTA'];
+    else quotaFilter = QUOTA_MAPPING['all_india'];
+  }
+
+  // Get mapped category filter
   const categoryFilter = CATEGORY_MAPPING[categorySearch] || options.category;
-  const quotaFilter = QUOTA_MAPPING[quotaSearch] || options.quota;
 
   // Year fallback: if no data for requested year, get the latest year available for this category
   let targetYear = options.year;
@@ -205,18 +223,20 @@ export async function getEligibleColleges(options: {
   let isFallback = false;
 
   if (options.locations && options.locations.length > 0) {
-    locationsQuery.collegeLocation = { $in: options.locations };
+    locationsQuery.collegeLocation = { 
+      $in: options.locations.map(loc => new RegExp(loc, 'i'))
+    };
   }
 
   let docs = await CollegeCutoffModel.find(locationsQuery)
     .sort({ rank: 1 })
-    .limit(300);
+    .limit(100);
 
   // If we have location constraints and found few results, try without location constraints
-  if (docs.length < 30 && options.locations && options.locations.length > 0) {
+  if (docs.length < 20 && options.locations && options.locations.length > 0) {
     docs = await CollegeCutoffModel.find(query)
       .sort({ rank: 1 })
-      .limit(300);
+      .limit(100);
     isFallback = true;
   }
 
@@ -280,6 +300,7 @@ export async function getPreviousYearCutoffs(options: {
       courseName: options.courseName,
       category: options.category,
       year,
+      counsellingType: 'state', // Default for prev year view or handle via options
       collegeType: options.collegeType,
       locations: options.locations,
       disableYearFallback: true,

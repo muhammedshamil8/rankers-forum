@@ -12,7 +12,9 @@ import {
   ChevronDown,
   ChevronUp,
   Save,
-  ArrowRight
+  ArrowRight,
+  Search,
+  X
 } from 'lucide-react';
 import {
   Select,
@@ -23,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useAuth, useRequireAuth } from '@/lib/hooks';
@@ -75,19 +78,20 @@ export default function StudentResultPage() {
   const [showPreferences, setShowPreferences] = useState(true);
   const [hasInitializedPreferences, setHasInitializedPreferences] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-  
+
   const queryClient = useQueryClient();
 
   // Preferences local state
   const [prefs, setPrefs] = useState({
+    score: '',
+    rank: '',
     counsellingType: '',
     preferredBranch: '',
-    preference1: '',
+    preference1: 'none',
     preference2: 'none',
     preference3: 'none',
   });
 
-  // 1. Try to get data from sessionStorage first
   useEffect(() => {
     const stored = sessionStorage.getItem('collegeResult');
     if (stored) {
@@ -104,7 +108,6 @@ export default function StudentResultPage() {
     }
   }, []);
 
-  // 2. Fetch profile
   const { data: profileData, isLoading: isProfileLoading } = useQuery({
     queryKey: ['student-profile'],
     queryFn: async () => {
@@ -115,53 +118,53 @@ export default function StudentResultPage() {
     enabled: !!isAuthorized,
   });
 
-  // Sync preferences from profile
   useEffect(() => {
     if (profileData?.student) {
-      const { counsellingType, preferredBranch, locationPreference1, locationPreference2, locationPreference3 } = profileData.student;
+      const { score, rank, counsellingType, preferredBranch, locationPreference1, locationPreference2, locationPreference3 } = profileData.student;
       setPrefs({
+        score: score || '',
+        rank: rank?.toString() || '',
         counsellingType: counsellingType || '',
         preferredBranch: preferredBranch || '',
-        preference1: locationPreference1 || '',
+        preference1: locationPreference1 || 'none',
         preference2: locationPreference2 || 'none',
         preference3: locationPreference3 || 'none',
       });
 
-      // Logic: If no preferences saved (new user), start with panel OPEN (Problem FIX)
       if (!hasInitializedPreferences) {
-        if (!counsellingType && !locationPreference1) {
-          setShowPreferences(true);
-        } else {
-          setShowPreferences(false);
-        }
         setHasInitializedPreferences(true);
       }
     }
   }, [profileData, hasInitializedPreferences]);
 
-  // Fetch available locations
-  const { data: locationsData, isLoading: locationsLoading } = useQuery<{ locations: string[] }>({
-    queryKey: ['locations'],
+
+
+  const [search1, setSearch1] = useState('');
+  const [search2, setSearch2] = useState('');
+  const [search3, setSearch3] = useState('');
+  const [searchFilter, setSearchFilter] = useState('');
+
+  const branches = ['MBBS', 'BDS'];
+
+  // Fetch available locations from DB
+  const { data: locationsData } = useQuery<{ locations: string[], totalCount: number }>({
+    queryKey: ['college-locations'],
     queryFn: async () => {
       const response = await fetch('/api/colleges/locations');
-      if (!response.ok) throw new Error('Failed to fetch locations');
+      if (!response.ok) return { locations: [] as string[], totalCount: 0 };
       return response.json();
     },
   });
-  const locations = locationsData?.locations || [];
 
-  // Branch options
-  const branches = ['MBBS', 'BDS'];
+  const availableLocations = locationsData?.locations || [] as string[];
 
-  // Update preferences mutation
   const updatePrefsMutation = useMutation({
     mutationFn: async (updatedPrefs: typeof prefs) => {
       const resp = await fetch('/api/students/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // Preserve existing academic info from profileData
-          marks: profileData?.student?.marks,
+          score: profileData?.student?.score,
           rank: profileData?.student?.rank,
           yearOfPassing: profileData?.student?.yearOfPassing,
           category: profileData?.student?.category,
@@ -169,12 +172,12 @@ export default function StudentResultPage() {
           institution: profileData?.student?.institution,
           domicileState: profileData?.student?.domicileState,
           referralCode: profileData?.student?.referralCode,
-          // Update values
+
           counsellingType: updatedPrefs.counsellingType,
           preferredBranch: updatedPrefs.preferredBranch,
           locationPreference1: updatedPrefs.preference1,
-          locationPreference2: updatedPrefs.preference2 === 'none' ? '' : updatedPrefs.preference2,
-          locationPreference3: updatedPrefs.preference3 === 'none' ? '' : updatedPrefs.preference3,
+          locationPreference2: updatedPrefs.preference2,
+          locationPreference3: updatedPrefs.preference3,
           isProfileComplete: true,
         }),
       });
@@ -182,12 +185,10 @@ export default function StudentResultPage() {
       return resp.json();
     },
     onSuccess: async () => {
-      // Invalidate both profile and colleges to trigger total re-fetch
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['student-profile'] }),
         queryClient.invalidateQueries({ queryKey: ['eligible-colleges-direct'] })
       ]);
-      // Close preferences panel smoothly
       setShowPreferences(false);
     },
     onError: (error) => {
@@ -197,27 +198,18 @@ export default function StudentResultPage() {
 
   const counsellingType = profileData?.student?.counsellingType || 'all_india';
 
-  // Determine tabs based on counselling type (Problem 15)
   const getTabs = () => {
     if (counsellingType === 'state') {
       return [
-        { value: 'government', label: 'Govt' },
+        { value: 'government', label: 'Government' },
         { value: 'private', label: 'Private' },
         { value: 'management', label: 'Management' },
         { value: 'nri', label: 'NRI' },
       ];
-    } else if (counsellingType === 'deemed') {
+    } else {
       return [
         { value: 'aiq', label: 'All India Quota' },
-        { value: 'paid', label: 'Deemed/paid seats' },
-        { value: 'nri', label: 'NRI' },
-      ];
-    } else {
-      // All India Counselling (Default)
-      return [
-        { value: 'government', label: 'Government' },
-        { value: 'private', label: 'Private' },
-        { value: 'deemed', label: 'Deemed' },
+        { value: 'paid', label: 'Deemed/Paid Seats' },
         { value: 'nri', label: 'NRI' },
       ];
     }
@@ -225,44 +217,41 @@ export default function StudentResultPage() {
 
   const tabs = getTabs();
 
-  // Set initial tab if current one isn't in new tabs list
   useEffect(() => {
     if (tabs.length > 0 && !tabs.find(t => t.value === activeTab)) {
       setActiveTab(tabs[0].value);
     }
   }, [counsellingType, tabs, activeTab]);
 
-  // Normalize seat type for filtering
   const normalizeSeatType = (quota: string, collegeType: string): string => {
-    const q = (quota || '').toLowerCase();
-    const t = (collegeType || '').toLowerCase();
-    
+    const q = (quota || '').toLowerCase().trim();
+    const t = (collegeType || '').toLowerCase().trim();
+
     if (q.includes('nri')) return 'nri';
     if (q.includes('mgmt') || q.includes('management') || q.includes('mng')) return 'management';
     if (q.includes('paid') || (t.includes('deemed') && q.includes('deemed'))) return 'paid';
     if (q.includes('aiq') || q.includes('all india')) return 'aiq';
-    if (q.includes('govt') || t.includes('government')) return 'government';
-    if (q.includes('priv') || t.includes('private')) return 'private';
+    if (q.includes('govt') || t.includes('government') || q === 'govt') return 'government';
+    if (q.includes('priv') || t.includes('private') || q === 'priv') return 'private';
     if (t.includes('deemed')) return 'paid';
-    
+
     return t || 'government';
   };
 
-  // 3. Fetch results if not in session
-  const { 
-    data: fetchedResults, 
-    isLoading: isFetchingResults, 
+  const {
+    data: fetchedResults,
+    isLoading: isFetchingResults,
     refetch: refetchColleges,
     error: queryError
   } = useQuery<ResultData>({
-    queryKey: ['eligible-colleges-direct', profileData?.student?.domicileState, profileData?.student?.preferredBranch, profileData?.student?.counsellingType],
+    queryKey: ['eligible-colleges-direct', profileData?.student?.preferredBranch, profileData?.student?.counsellingType, activeTab],
     queryFn: async () => {
       setApiError(null);
       if (!profileData?.student) throw new Error('Student profile not found');
-      
+
       const params = new URLSearchParams({
-        domicileState: profileData.student.domicileState || '',
-        track: 'true', // Increment checks on first view or change
+        tab: activeTab,
+        track: 'true',
       });
       const resp = await fetch(`/api/colleges/eligible?${params}`);
       if (resp.status === 403) {
@@ -275,7 +264,6 @@ export default function StudentResultPage() {
     staleTime: 60000,
   });
 
-  // Handle Query Errors (v5 replacement for onError)
   useEffect(() => {
     if (queryError instanceof Error) {
       setApiError(queryError.message);
@@ -285,7 +273,6 @@ export default function StudentResultPage() {
   useEffect(() => {
     if (fetchedResults) {
       setResultData(fetchedResults);
-      // Scroll to top of list area when results update
       const listElement = document.getElementById('college-list-top');
       if (listElement) {
         listElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -295,7 +282,6 @@ export default function StudentResultPage() {
 
   const isBusy = authLoading || (isAuthorized && !resultData && (isProfileLoading || isFetchingResults));
 
-  // Redirect if absolutely no profile found (not just loading)
   useEffect(() => {
     if (!isBusy && isAuthorized && !profileData?.student && !isProfileLoading) {
       const timer = setTimeout(() => {
@@ -324,32 +310,29 @@ export default function StudentResultPage() {
     );
   }
 
-  // Deduplicate and merge colleges
   const uniqueCollegesMap = new Map();
   const rawColleges = resultData ? [...(resultData.colleges || []), ...(resultData.otherColleges || [])] : [];
-  
-  rawColleges.forEach((c: any) => {
-    if (!uniqueCollegesMap.has(c.id)) {
-      uniqueCollegesMap.set(c.id, {
-        ...c,
-        rank: Number(c.rank || c.closingRank || 0),
-        courseName: (c.courseName || c.branch || '').toString(),
-      });
-    }
-  });
+
+rawColleges.forEach((c: any) => {
+  const collegeId = c._id?.toString() || c.id;  // ← Check both
+  if (!uniqueCollegesMap.has(collegeId)) {
+    uniqueCollegesMap.set(collegeId, {
+      id: collegeId,  // ← Ensure id exists
+      ...c,
+      rank: Number(c.rank || c.closingRank || 0),
+    });
+  }
+});
 
   const allColleges = Array.from(uniqueCollegesMap.values()) as College[];
 
   const filteredColleges = allColleges.filter(college => {
-    const normalized = normalizeSeatType(college.quota || '', college.collegeType);
-    const matchesType = normalized === activeTab;
     const matchesState = stateFilter === 'all' || (college.collegeLocation && college.collegeLocation.includes(stateFilter));
-    return matchesType && matchesState;
+    return matchesState;
   });
 
   const displayYear = resultData?.currentYear || resultData?.year || new Date().getFullYear();
 
-  // Problem 16: User-friendly category mapping
   const formatCategory = (cat: string): string => {
     if (!cat) return 'N/A';
     const c = cat.toUpperCase();
@@ -384,45 +367,20 @@ export default function StudentResultPage() {
   return (
     <div className="min-h-screen bg-white animate-page">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Title and Filters */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-[26px] font-medium text-slate-900">My Eligible College List</h1>
-            <p className="text-amber-600 flex items-center gap-2 mt-1 text-xs">
-              <AlertTriangle className="h-4 w-4" />
-              The college list is generated using historical counselling data and is for reference purpose only.
-            </p>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-600">State</span>
-            <Select value={stateFilter} onValueChange={setStateFilter} >
-              <SelectTrigger className="w-48 cursor-pointer">
-                <SelectValue placeholder="All States" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All States</SelectItem>
-                {INDIAN_STATES.map((state) => (
-                  <SelectItem key={state} value={state}>{state}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
 
         {apiError && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-red-800">Prediction Limit Reached</p>
+              <p className="text-sm font-semibold text-red-800"> Limit Reached</p>
               <p className="text-xs text-red-600 mt-1">{apiError}</p>
             </div>
           </div>
         )}
 
-        {/* Dynamic Preferences Form (Problem 12) */}
         <div className="mb-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300">
-          <button 
+          <button
             onClick={() => setShowPreferences(!showPreferences)}
             className="flex w-full items-center justify-between p-4 px-6 text-left hover:bg-slate-50 transition-colors cursor-pointer z-10 relative"
           >
@@ -440,17 +398,16 @@ export default function StudentResultPage() {
             </div>
           </button>
 
-          <div 
+          <div
             className={`grid transition-all duration-500 ease-in-out ${showPreferences ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
           >
             <div className="overflow-hidden">
               <div className="p-6 px-8 border-t border-slate-100 bg-white space-y-6">
                 <div className="grid sm:grid-cols-2 gap-6">
-                  {/* Counselling Type */}
                   <div className="space-y-2">
                     <Label className="text-slate-700">Counselling Type</Label>
-                    <Select 
-                      value={prefs.counsellingType} 
+                    <Select
+                      value={prefs.counsellingType}
                       onValueChange={(val) => setPrefs(prev => ({ ...prev, counsellingType: val }))}
                     >
                       <SelectTrigger className="h-12 border-slate-200 rounded-xl focus:ring-indigo-500">
@@ -464,11 +421,10 @@ export default function StudentResultPage() {
                     </Select>
                   </div>
 
-                  {/* Branch */}
                   <div className="space-y-2">
                     <Label className="text-slate-700">Preferred Branch</Label>
-                    <Select 
-                      value={prefs.preferredBranch} 
+                    <Select
+                      value={prefs.preferredBranch}
                       onValueChange={(val) => setPrefs(prev => ({ ...prev, preferredBranch: val }))}
                     >
                       <SelectTrigger className="h-12 border-slate-200 rounded-xl focus:ring-indigo-500">
@@ -483,93 +439,233 @@ export default function StudentResultPage() {
                   </div>
                 </div>
 
-                {/* Locations */}
-                <div className="space-y-3">
-                  <Label className="text-slate-700">Interested Study Locations</Label>
+                <div className="space-y-4">
+                  <Label className="text-slate-700 block mb-2">Interested Study Locations</Label>
                   <div className="grid sm:grid-cols-3 gap-4">
-                    <Select value={prefs.preference1} onValueChange={(val) => setPrefs(prev => ({ ...prev, preference1: val }))}>
-                      <SelectTrigger className="h-12 border-slate-200 rounded-xl focus:ring-indigo-500">
-                        <SelectValue placeholder="1st Preference" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map(loc => (
-                          <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-slate-500 font-medium flex items-center gap-1">
+                        Preference 1 (Required) <span className="text-red-500">*</span>
+                      </Label>
+                      <Select 
+                        value={prefs.preference1} 
+                        onValueChange={(val) => setPrefs(prev => ({ ...prev, preference1: val }))}
+                      >
+                        <SelectTrigger className={`h-11 border-slate-200 rounded-xl ${!prefs.preference1 || prefs.preference1 === 'none' ? 'border-red-200 bg-red-50/10' : ''}`}>
+                          <SelectValue placeholder="Select Location" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[400px]">
+                          <div className="p-2 pb-0 sticky top-0 bg-white z-10" onKeyDown={(e) => e.stopPropagation()}>
+                            <div className="relative">
+                              <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                              <Input
+                                placeholder="Search location..."
+                                value={search1}
+                                onChange={(e) => setSearch1(e.target.value)}
+                                className="pl-8 h-9 text-sm border-slate-100 bg-slate-50 focus-visible:ring-indigo-500"
+                                onPointerDown={(e) => e.stopPropagation()}
+                              />
+                              {search1 && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setSearch1(''); }}
+                                  className="absolute right-2 top-2.5"
+                                >
+                                  <X className="h-4 w-4 text-slate-400 hover:text-slate-600" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {availableLocations.filter((loc: string) => loc.toLowerCase().includes(search1.toLowerCase())).length === 0 ? (
+                            <div className="p-4 text-center text-sm text-slate-500 italic">No locations found</div>
+                          ) : (
+                            availableLocations
+                              .filter((loc: string) => loc.toLowerCase().includes(search1.toLowerCase()))
+                              .map((loc: string) => (
+                                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                              ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                    <Select value={prefs.preference2} onValueChange={(val) => setPrefs(prev => ({ ...prev, preference2: val }))}>
-                      <SelectTrigger className="h-12 border-slate-200 rounded-xl focus:ring-indigo-500">
-                        <SelectValue placeholder="2nd Preference" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Not Specified</SelectItem>
-                        {locations.map(loc => (
-                          <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-slate-500">Preference 2 (Optional)</Label>
+                      <Select 
+                        value={prefs.preference2} 
+                        onValueChange={(val) => setPrefs(prev => ({ ...prev, preference2: val }))}
+                      >
+                        <SelectTrigger className="h-11 border-slate-200 rounded-xl">
+                          <SelectValue placeholder="Select Location" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[400px]">
+                          <div className="p-2 pb-0 sticky top-0 bg-white z-10" onKeyDown={(e) => e.stopPropagation()}>
+                            <div className="relative">
+                              <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                              <Input
+                                placeholder="Search location..."
+                                value={search2}
+                                onChange={(e) => setSearch2(e.target.value)}
+                                className="pl-8 h-9 text-sm border-slate-100 bg-slate-50 focus-visible:ring-indigo-500"
+                                onPointerDown={(e) => e.stopPropagation()}
+                              />
+                              {search2 && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setSearch2(''); }}
+                                  className="absolute right-2 top-2.5"
+                                >
+                                  <X className="h-4 w-4 text-slate-400 hover:text-slate-600" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <SelectItem value="none">None</SelectItem>
+                          {availableLocations.filter((loc: string) => loc.toLowerCase().includes(search2.toLowerCase())).length === 0 ? (
+                            <div className="p-4 text-center text-sm text-slate-500 italic">No locations found</div>
+                          ) : (
+                            availableLocations
+                              .filter((loc: string) => loc.toLowerCase().includes(search2.toLowerCase()))
+                              .map((loc: string) => (
+                                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                              ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                    <Select value={prefs.preference3} onValueChange={(val) => setPrefs(prev => ({ ...prev, preference3: val }))}>
-                      <SelectTrigger className="h-12 border-slate-200 rounded-xl focus:ring-indigo-500">
-                        <SelectValue placeholder="3rd Preference" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Not Specified</SelectItem>
-                        {locations.map(loc => (
-                          <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-slate-500">Preference 3 (Optional)</Label>
+                      <Select 
+                        value={prefs.preference3} 
+                        onValueChange={(val) => setPrefs(prev => ({ ...prev, preference3: val }))}
+                      >
+                        <SelectTrigger className="h-11 border-slate-200 rounded-xl">
+                          <SelectValue placeholder="Select Location" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[400px]">
+                          <div className="p-2 pb-0 sticky top-0 bg-white z-10" onKeyDown={(e) => e.stopPropagation()}>
+                            <div className="relative">
+                              <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                              <Input
+                                placeholder="Search location..."
+                                value={search3}
+                                onChange={(e) => setSearch3(e.target.value)}
+                                className="pl-8 h-9 text-sm border-slate-100 bg-slate-50 focus-visible:ring-indigo-500"
+                                onPointerDown={(e) => e.stopPropagation()}
+                              />
+                              {search3 && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setSearch3(''); }}
+                                  className="absolute right-2 top-2.5"
+                                >
+                                  <X className="h-4 w-4 text-slate-400 hover:text-slate-600" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <SelectItem value="none">None</SelectItem>
+                          {availableLocations.filter((loc: string) => loc.toLowerCase().includes(search3.toLowerCase())).length === 0 ? (
+                            <div className="p-4 text-center text-sm text-slate-500 italic">No locations found</div>
+                          ) : (
+                            availableLocations
+                              .filter((loc: string) => loc.toLowerCase().includes(search3.toLowerCase()))
+                              .map((loc: string) => (
+                                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                              ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
-                {/* Action Button */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-                  <div className="text-xs text-amber-600 font-medium">
-                    * At least one location preference is required
-                  </div>
-                  <Button 
-                    onClick={() => {
-                      if (!prefs.preference1 || prefs.preference1 === '') {
-                        setApiError('Please select at least one preferred location.');
-                        return;
-                      }
-                      updatePrefsMutation.mutate(prefs);
-                    }}
-                    disabled={updatePrefsMutation.isPending}
-                    className="h-12 bg-linear-to-r from-[#2F129B] to-[#6366F1] rounded-xl px-8 shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
-                  >
-                    {updatePrefsMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Updating Predictions...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Update Predictions
-                      </>
-                    )}
-                  </Button>
-                </div>
+
+
+                <Button
+                  onClick={() => {
+                    updatePrefsMutation.mutate(prefs);
+                  }}
+                  disabled={updatePrefsMutation.isPending || !prefs.preference1 || prefs.preference1 === 'none'}
+                  className="h-12 bg-linear-to-r from-[#2F129B] to-[#6366F1] rounded-xl px-8 shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
+                >
+                  {updatePrefsMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating Predictions...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Update the preferences
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Tabs — dynamic and responsive */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-6">
+          <div>
+            <h1 className="text-2xl sm:text-[26px] font-medium text-slate-900">My Eligible College List</h1>
+            <p className="text-amber-600 flex items-center gap-2 mt-1 text-xs font-medium">
+              <AlertTriangle className="h-4 w-4" />
+              The college list is generated using historical counselling data and is for reference purpose only.
+            </p>
+          </div>
+
+
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-600 font-medium">Filter by State</span>
+            <Select value={stateFilter} onValueChange={setStateFilter} >
+              <SelectTrigger className="w-48 cursor-pointer">
+                <SelectValue placeholder="All States" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[400px]">
+                <div className="p-2 pb-0 sticky top-0 bg-white z-10" onKeyDown={(e) => e.stopPropagation()}>
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Search..."
+                      value={searchFilter}
+                      onChange={(e) => setSearchFilter(e.target.value)}
+                      className="pl-8 h-9 text-sm border-slate-100 bg-slate-50 focus-visible:ring-indigo-500"
+                      onPointerDown={(e) => e.stopPropagation()}
+                    />
+                    {searchFilter && (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setSearchFilter(''); }}
+                        className="absolute right-2 top-2.5"
+                      >
+                        <X className="h-4 w-4 text-slate-400 hover:text-slate-600" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <SelectItem value="all">All Locations</SelectItem>
+                {availableLocations.filter((loc: string) => loc.toLowerCase().includes(searchFilter.toLowerCase())).length === 0 ? (
+                  <div className="p-4 text-center text-sm text-slate-500 italic">No matches</div>
+                ) : (
+                  availableLocations
+                    .filter((loc: string) => loc.toLowerCase().includes(searchFilter.toLowerCase()))
+                    .map((loc: string) => (
+                      <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                    ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         <div id="college-list-top" className="flex items-center justify-between gap-4 mb-6">
           <div className="flex border w-full sm:w-fit overflow-x-auto no-scrollbar rounded-[8px] p-1 gap-2">
             {tabs.map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => setActiveTab(tab.value)}
-                className={`px-4 py-2 rounded-[8px] cursor-pointer text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${
-                  activeTab === tab.value
+                className={`px-4 py-2 rounded-[8px] cursor-pointer text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab.value
                     ? 'bg-linear-to-r from-[#2F129B] to-[#3B82F6] text-white'
                     : 'text-slate-600 hover:bg-slate-50'
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -584,7 +680,6 @@ export default function StudentResultPage() {
           </div>
         </div>
 
-        {/* Background loading pulse */}
         {isFetchingResults && resultData && (
           <div className="mb-4 flex items-center gap-2 text-indigo-600 animate-pulse">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -592,12 +687,10 @@ export default function StudentResultPage() {
           </div>
         )}
 
-        {/* Year label */}
         <p className="text-slate-600 text-sm mb-6">
           Current Year Predictions — <span className="font-medium">{displayYear}</span>
         </p>
 
-        {/* College List */}
         {filteredColleges.length > 0 ? (
           <div className="space-y-4">
             {filteredColleges.map((college) => (
@@ -607,20 +700,17 @@ export default function StudentResultPage() {
               >
                 <div className="grid gap-y-4 lg:grid-cols-2 p-3 md:p-5">
 
-                  {/* College Info */}
                   <div className="flex-1 flex justify-between h-full">
                     <div className="flex flex-col justify-center">
                       <h3 className="font-semibold text-[#4B5563] text-sm">{college.collegeName?.replace(/,,/g, ',')}</h3>
                       <p className="text-[#4B5563] text-sm">{college.collegeLocation?.replace(/,,/g, ',')}</p>
                     </div>
-                    {/* Actions — mobile */}
                     <div className="md:hidden flex flex-col items-center gap-2 ml-6">
                       {getChanceBadge(college.chance)}
                     </div>
                   </div>
 
                   <div className="flex items-center h-full justify-between">
-                    {/* Details Grid */}
                     <div className="h-full grid grid-cols-4 gap-1 md:gap-3 text-center flex-1">
                       <div className="bg-[#E7EAEE] rounded-lg p-1 md:p-2 px-3 h-full">
                         <p className="text-[10px] md:text-xs text-slate-400 mb-1">allotted category</p>
@@ -642,14 +732,12 @@ export default function StudentResultPage() {
                       </div>
                     </div>
 
-                    {/* Actions — desktop */}
                     <div className="hidden md:flex flex-col items-center gap-2 ml-6">
                       {getChanceBadge(college.chance)}
                     </div>
                   </div>
                 </div>
 
-                {/* Expanded Details - optional for future details if needed */}
                 {expandedCollege === college.id && (
                   <div className="border-t border-slate-100 p-5 bg-slate-50">
                     <div className="grid sm:grid-cols-4 gap-4 text-sm">
@@ -685,7 +773,6 @@ export default function StudentResultPage() {
           </div>
         )}
 
-        {/* Back Link */}
         <div className="mt-8 flex items-center justify-between">
           <button
             onClick={() => router.push('/student/info')}

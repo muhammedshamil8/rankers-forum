@@ -41,7 +41,6 @@ export function Header() {
       <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-lg border-b border-slate-100">
         <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
-            {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600">
                 <span className="text-white font-bold text-lg">R</span>
@@ -51,7 +50,6 @@ export function Header() {
               </span>
             </Link>
 
-            {/* Desktop navigation */}
             <div className="hidden md:flex md:items-center md:gap-8">
               <a href="#how-it-works" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
                 How it Works
@@ -67,7 +65,6 @@ export function Header() {
               </a>
             </div>
 
-            {/* Desktop CTA */}
             <div className="hidden md:flex md:items-center md:gap-3">
               {loading ? (
                 <div className="h-11 w-24 bg-slate-100 rounded-lg animate-pulse" />
@@ -92,7 +89,6 @@ export function Header() {
               )}
             </div>
 
-            {/* Mobile menu button */}
             <button
               type="button"
               className="md:hidden p-2 text-slate-600"
@@ -106,7 +102,6 @@ export function Header() {
             </button>
           </div>
 
-          {/* Mobile menu */}
           {mobileMenuOpen && (
             <div className="md:hidden py-4 border-t border-slate-100">
               <div className="flex flex-col gap-4">
@@ -149,7 +144,6 @@ export function Header() {
         </nav>
       </header>
 
-      {/* Auth Modals */}
       <LoginModal
         open={loginOpen}
         onOpenChange={setLoginOpen}

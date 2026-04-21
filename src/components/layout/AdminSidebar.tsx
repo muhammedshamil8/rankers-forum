@@ -42,7 +42,6 @@ export function AdminSidebar({ onLogoutClick }: AdminSidebarProps) {
 
   return (
     <aside className="w-64 bg-white text-white flex flex-col shadow-md border-r border-slate-100 fixed inset-y-0 left-0 z-50">
-      {/* Logo */}
       <div className="p-6 ">
         <Image
           src="/logoBlue.svg"
@@ -53,7 +52,6 @@ export function AdminSidebar({ onLogoutClick }: AdminSidebarProps) {
           priority
         />
       </div>
-      {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
         {links.map((link) => {
           const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
@@ -75,7 +73,6 @@ export function AdminSidebar({ onLogoutClick }: AdminSidebarProps) {
         })}
       </nav>
 
-      {/* User Profile */}
       <div className="p-4">
         <div className="bg-gray-100 rounded-lg p-3">
           <div className="flex items-center gap-3 mb-3">

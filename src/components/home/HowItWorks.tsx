@@ -41,10 +41,8 @@ export function HowItWorks() {
                                         <h3 className=' text-sm md:text-lg font-medium text-white mb-2 text-center'>{step.title}</h3>
                                         <p className='text-white  text-[11px]  md:text-sm text-center'>{step.description}</p>
                                     </div>
-                                    {/* right cuttings  */}
                                     <div className='absolute -right-20 top-1/2 -translate-y-1/2 aspect-square h-full bg-white flex items-center justify-center rotate-45'>
                                     </div>
-                                    {/* left cuttings  */}
                                     <div className='absolute -left-20 top-1/2 -translate-y-1/2 aspect-square h-full bg-white flex items-center justify-center overflow-hidden '>
                                         <div className='w-full relative h-full bg-[#2F129B] rotate-45 translate-x-18 '>
                                             <div className='absolute top-[90%] left-[10%] -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-full w-[55%] md:w-[70%] h-[55%] md:h-[70%] bg-white'>

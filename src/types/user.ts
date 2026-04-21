@@ -58,7 +58,7 @@ export interface Student {
   locationPreference3: string;
   checksUsed: number;
   isProfileComplete: boolean;
-  marks: number;
+  score: number;
   referralCode: string;
   createdAt: FirestoreTimestamp;
   updatedAt: FirestoreTimestamp;
@@ -66,6 +66,7 @@ export interface Student {
 
 export interface CreateStudentInput {
   rank: number;
+  
   yearOfPassing: number;
   category: string;
   gender: Gender;
@@ -76,7 +77,7 @@ export interface CreateStudentInput {
   locationPreference1: string;
   locationPreference2: string;
   locationPreference3: string;
-  marks?: number;
+  score?: number;
   referralCode?: string;
 }
 

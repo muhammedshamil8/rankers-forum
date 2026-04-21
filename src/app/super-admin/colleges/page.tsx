@@ -104,9 +104,7 @@ export default function CollegePage() {
         </div>
       ) : (
         <>
-          {/* Year Tabs and Search Bar */}
           <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-            {/* Year Tabs */}
             <div className="flex gap-4">
               {AVAILABLE_YEARS.map((year) => (
                 <button
@@ -123,7 +121,6 @@ export default function CollegePage() {
               ))}
             </div>
 
-            {/* Search Bar */}
             <div className="relative max-w-2xl  w-full max-w-[450px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
@@ -136,7 +133,6 @@ export default function CollegePage() {
             </div>
           </div>
 
-          {/* Colleges Table */}
           <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -177,7 +173,6 @@ export default function CollegePage() {
               </table>
             </div>
             
-            {/* Pagination */}
             {!isLoading && filteredColleges.length > 0 && (
               <Pagination
                 currentPage={currentPage}
@@ -191,7 +186,6 @@ export default function CollegePage() {
         </>
       )}
       
-      {/* Upload Dialog */}
       <UploadDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen} />
     </AdminLayout>
   );
