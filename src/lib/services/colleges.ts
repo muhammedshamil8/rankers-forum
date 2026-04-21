@@ -144,6 +144,8 @@ export async function getEligibleColleges(options: {
   locations?: string[];
   disableYearFallback?: boolean;
 }): Promise<{ primary: CollegeWithChance[]; others: CollegeWithChance[] }> {
+  await dbConnect();
+
   // Normalize inputs
   const categorySearch = options.category.toLowerCase();
   const counsellingType = options.counsellingType.toLowerCase();
@@ -167,13 +169,23 @@ export async function getEligibleColleges(options: {
   }
 
   // Get mapped category filter
-  const categoryFilter = CATEGORY_MAPPING[categorySearch] || options.category;
+  let categoryFilter: string | string[] | RegExp = CATEGORY_MAPPING[categorySearch] || options.category;
 
-  // Year fallback: if no data for requested year, get the latest year available for this category
+  // Broaden category for NRI and Management tabs as these are typically open to all categories
+  if (tab === 'nri' || tab === 'management') {
+    categoryFilter = /.*/; 
+  }
+
+  // Year fallback: if no data for requested year, get the latest year available for this specific
+  // course + category + quota context (tab-aware), not just category.
   let targetYear = options.year;
-  
+
   // Use a flexible query for the initial check to account for mapping
-  const checkQuery: any = { year: targetYear };
+  const checkQuery: any = {
+    year: targetYear,
+    courseName: { $regex: new RegExp(`^${options.courseName}$`, 'i') },
+  };
+
   if (categoryFilter instanceof RegExp) {
     checkQuery.category = categoryFilter;
   } else if (Array.isArray(categoryFilter)) {
@@ -182,11 +194,20 @@ export async function getEligibleColleges(options: {
     checkQuery.category = new RegExp(`^${categoryFilter}$`, 'i');
   }
 
+  if (quotaFilter) {
+    if (Array.isArray(quotaFilter)) {
+      checkQuery.quota = { $in: quotaFilter.map(q => new RegExp(`^${q}$`, 'i')) };
+    } else {
+      checkQuery.quota = new RegExp(`^${quotaFilter}$`, 'i');
+    }
+  }
+
   const initialCheck = await CollegeCutoffModel.findOne(checkQuery);
   
   if (!initialCheck && !options.disableYearFallback) {
-    const latestYearDoc = await CollegeCutoffModel.findOne({ 
-      category: checkQuery.category 
+    const latestYearDoc = await CollegeCutoffModel.findOne({
+      ...checkQuery,
+      year: { $exists: true },
     }).sort({ year: -1 });
     
     if (latestYearDoc) {
