@@ -31,7 +31,7 @@ export default function ReferralCodesPage() {
   const router = useRouter();
   const { isAuthorized, loading: authLoading } = useRequireAuth(['super_admin']);
   const queryClient = useQueryClient();
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newCode, setNewCode] = useState('');
   const [description, setDescription] = useState('');
@@ -95,8 +95,8 @@ export default function ReferralCodesPage() {
   }, [authLoading, isAuthorized, router]);
 
   const codes: ReferralCode[] = data?.codes || [];
-  const filteredCodes = codes.filter(c => 
-    c.code.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filteredCodes = codes.filter(c =>
+    c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -154,8 +154,8 @@ export default function ReferralCodesPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredCodes.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                    filteredCodes.map((item: ReferralCode, index: number) => (
+                      <tr key={index} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 font-bold text-slate-900 tracking-wider">
                           <code className="bg-slate-100 px-2 py-1 rounded text-indigo-700">{item.code}</code>
                         </td>

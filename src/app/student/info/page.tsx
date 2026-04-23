@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { Loader2, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Loader2, AlertTriangle, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
@@ -52,7 +52,7 @@ const basicDetailsSchema = Yup.object({
 export default function StudentInfoPage() {
   const router = useRouter();
   const { user, loading: authLoading, refreshUser } = useAuth();
-  const { isAuthorized } = useRequireAuth(['student']);
+  const { isAuthorized, isAdmin, isSuperAdmin } = useRequireAuth(['student', 'admin', 'super_admin']);
   const queryClient = useQueryClient();
   const [logoutOpen, setLogoutOpen] = useState(false);
 
@@ -82,7 +82,14 @@ export default function StudentInfoPage() {
   const referralCodes = referralCodesData?.codes || [];
   
   const student = profileData?.student;
+  const remainingChecks = profileData?.remainingChecks ?? 0;
+  const isAdminOrSuperAdmin = isAdmin || isSuperAdmin;
+  
+  // Profile is complete if they have already saved once
   const profileIsComplete = !!student && (student.rank > 0 || student.isProfileComplete);
+  
+  // Fields are locked if user is a student AND has used all their checks
+  const isLocked = !isAdminOrSuperAdmin && profileIsComplete && remainingChecks <= 0;
 
   const submitMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -173,30 +180,39 @@ export default function StudentInfoPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-[#1E1E1E]">Enter Your Details</h1>
-          {profileIsComplete ? (
+          {isAdminOrSuperAdmin ? (
+            <div className="mt-3 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+              <p className="text-sm text-indigo-700 flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5" />
+                <strong>Admin Mode:</strong> You have unlimited rank checks. Changes will not count towards any limit.
+              </p>
+            </div>
+          ) : profileIsComplete ? (
             <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-[#E7F0FF] border border-[#B8D4FF] rounded-xl shadow-xs">
               <div className="flex items-start gap-2">
                 <svg className="h-5 w-5 text-[#2F129B] mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
-                <p className="text-sm text-[#2F129B]">
-                  Your basic details are saved and <strong>cannot be changed</strong>. You can update your <strong>Course and Location preferences</strong> on the results page.
-                </p>
+                <div className="text-sm text-[#2F129B]">
+                  <p>Your details are saved. You can still update your rank and preferences anytime.</p>
+                </div>
               </div>
-              <Button 
-                type="button"
-                onClick={() => router.push('/student/result')}
-                variant="outline"
-                className="bg-white border-[#2F129B] cursor-pointer text-[#2F129B] hover:bg-white/90 shrink-0 font-medium"
-              >
-                View My Results
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  type="button"
+                  onClick={() => router.push('/student/result')}
+                  variant="outline"
+                  className="bg-white border-[#2F129B] cursor-pointer text-[#2F129B] hover:bg-white/90 shrink-0 font-medium"
+                >
+                  View My Results
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             </div>
           ) : (
-            <p className="text-amber-600 flex items-center gap-2 mt-2 text-sm font-medium">
-              <AlertTriangle className="h-4 w-4" />
-              Please enter your details carefully! Once Saved, They Cannot Be Edited Or Updated Later.
+            <p className="text-[#2F129B] flex items-center gap-2 mt-2 text-sm font-medium">
+              <ShieldCheck className="h-4 w-4" />
+              You can perform unlimited rank and college lookups.
             </p>
           )}
         </div>
@@ -210,12 +226,12 @@ export default function StudentInfoPage() {
 
           <section>
             <h2 className={`text-lg font-semibold text-[#2F129B] mb-8 flex items-center gap-2`}>
-              {profileIsComplete && (
+              {isLocked && (
                 <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               )}
-              {profileIsComplete ? "Account Summary (Locked)" : "Basic and Academic Details"}
+              {isLocked ? "Account Summary (Locked)" : "Basic and Academic Details"}
             </h2>
 
             <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
@@ -225,9 +241,9 @@ export default function StudentInfoPage() {
                   id="score"
                   type="number"
                 placeholder="Enter your Neet score"
-                  className={`h-12 border-slate-200 focus:border-indigo-500 ${formik.touched.rank && formik.errors.rank ? 'border-red-500' : ''} ${profileIsComplete ? 'bg-slate-50/50 cursor-not-allowed opacity-100' : ''}`}
+                  className={`h-12 border-slate-200 focus:border-indigo-500 ${formik.touched.rank && formik.errors.rank ? 'border-red-500' : ''} ${isLocked ? 'bg-slate-50/50 cursor-not-allowed opacity-100' : ''}`}
                   {...formik.getFieldProps('score')}
-                  readOnly={profileIsComplete}
+                  readOnly={isLocked}
                 />
                 {formik.touched.score && formik.errors.score && (
                   <p className="text-sm text-red-500 flex items-center gap-1 mt-1 font-medium">
@@ -243,9 +259,9 @@ export default function StudentInfoPage() {
                   id="rank"
                   type="text"
                   placeholder="Enter Your Rank"
-                  className={`h-12 border-slate-200 focus:border-indigo-500 ${formik.touched.rank && formik.errors.rank ? 'border-red-500' : ''} ${profileIsComplete ? 'bg-slate-50/50 cursor-not-allowed opacity-100' : ''}`}
+                  className={`h-12 border-slate-200 focus:border-indigo-500 ${formik.touched.rank && formik.errors.rank ? 'border-red-500' : ''} ${isLocked ? 'bg-slate-50/50 cursor-not-allowed opacity-100' : ''}`}
                   {...formik.getFieldProps('rank')}
-                  readOnly={profileIsComplete}
+                  readOnly={isLocked}
                 />
                 {formik.touched.rank && formik.errors.rank && (
                   <p className="text-sm text-red-500 flex items-center gap-1 mt-1 font-medium">
@@ -261,17 +277,17 @@ export default function StudentInfoPage() {
                   id="institution"
                   name="institution"
                   placeholder="Enter the 12th Board Name"
-                  className={`h-12 border-slate-200 focus:border-indigo-500 ${profileIsComplete ? 'bg-slate-50/50 cursor-not-allowed' : ''}`}
+                  className={`h-12 border-slate-200 focus:border-indigo-500 ${isLocked ? 'bg-slate-50/50 cursor-not-allowed' : ''}`}
                   value={formik.values.institution}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  disabled={profileIsComplete}
+                  disabled={isLocked}
                 />
               </div>
 
               <div ref={(el) => { fieldRefs.current['year'] = el; }} className="space-y-2">
                 <Label className="text-slate-700">Passing out year <span className="text-red-500">*</span></Label>
-                {profileIsComplete ? (
+                {isLocked ? (
                   <div className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50/50 px-4 flex items-center text-sm text-slate-600">
                     {formik.values.year}
                   </div>
@@ -291,7 +307,7 @@ export default function StudentInfoPage() {
 
               <div ref={(el) => { fieldRefs.current['domicileState'] = el; }} className="space-y-2">
                 <Label className="text-slate-700">Domicile State</Label>
-                {profileIsComplete ? (
+                {isLocked ? (
                   <div className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50/50 px-4 flex items-center text-sm text-slate-600">
                     {formik.values.domicileState || 'Not Specified'}
                   </div>
@@ -307,12 +323,12 @@ export default function StudentInfoPage() {
                     </SelectContent>
                   </Select>
                 )}
-                {!profileIsComplete && <p className="text-[10px] text-slate-500 italic">10 plus years of study (Optional)</p>}
+                {!isLocked && <p className="text-[10px] text-slate-500 italic">10 plus years of study (Optional)</p>}
               </div>
 
               <div ref={(el) => { fieldRefs.current['category'] = el; }} className="space-y-2">
                 <Label className="text-slate-700">Category <span className="text-red-500">*</span></Label>
-                {profileIsComplete ? (
+                {isLocked ? (
                   <div className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50/50 px-4 flex items-center text-sm text-slate-600">
                     {NEET_CATEGORIES.find(c => c.value === formik.values.category)?.label || formik.values.category}
                   </div>
@@ -332,7 +348,7 @@ export default function StudentInfoPage() {
 
               <div ref={(el) => { fieldRefs.current['gender'] = el; }} className="space-y-2">
                 <Label className="text-slate-700">Gender <span className="text-red-500">*</span></Label>
-                {profileIsComplete ? (
+                {isLocked ? (
                   <div className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50/50 px-4 flex items-center text-sm text-slate-600">
                     {GENDERS.find(g => g.value === formik.values.gender)?.label || formik.values.gender}
                   </div>
@@ -352,7 +368,7 @@ export default function StudentInfoPage() {
 
               <div ref={(el) => { fieldRefs.current['referralCode'] = el; }} className="space-y-2">
                 <Label className="text-slate-700">Referral Code</Label>
-                {profileIsComplete ? (
+                {isLocked ? (
                   <div className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50/50 px-4 flex items-center text-sm text-slate-600">
                     {formik.values.referralCode || 'None'}
                   </div>
@@ -367,12 +383,12 @@ export default function StudentInfoPage() {
                         <SelectItem key={ref.code} value={ref.code}>{ref.code} {ref.description ? `- ${ref.description}` : ''}</SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+              </Select>
                 )}
               </div>
             </div>
 
-            {!profileIsComplete && (
+            {!isLocked && (
               <div className="mt-10 pt-8 border-t border-slate-100 space-y-4" ref={(el) => { fieldRefs.current['confirmAccuracy'] = el; }}>
                 <div className="flex items-start gap-4 p-4 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
                   <div className="mt-0.5">
@@ -383,7 +399,7 @@ export default function StudentInfoPage() {
                     />
                   </div>
                   <Label htmlFor="confirmAccuracy" className="text-sm text-slate-600 leading-relaxed cursor-pointer select-none font-normal">
-                    I confirm that all the information provided is accurate and final. I agree to proceed with the entered details and understand that basic details cannot be modified later. <span className="text-red-500">*</span>
+                    I confirm that all the information provided is accurate and final. I agree to proceed with the entered details. <span className="text-red-500">*</span>
                   </Label>
                 </div>
                 {formik.touched.confirmAccuracy && formik.errors.confirmAccuracy && (
@@ -397,7 +413,7 @@ export default function StudentInfoPage() {
           </section>
 
           <div className="flex justify-center pt-8">
-            {!profileIsComplete && (
+            {!isLocked && (
               <Button
                 type="submit"
                 size="lg"
@@ -411,7 +427,7 @@ export default function StudentInfoPage() {
                   </>
                 ) : (
                   <>
-                    View Predicted Colleges
+                    {profileIsComplete ? 'Update and View Results' : 'View Predicted Colleges'}
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </>
                 )}

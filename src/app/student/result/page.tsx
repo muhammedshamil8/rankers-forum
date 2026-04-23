@@ -65,8 +65,8 @@ function normalizeCollegeType(raw: string): 'government' | 'private' | 'deemed' 
 
 export default function StudentResultPage() {
   const router = useRouter();
-  const { loading: authLoading } = useAuth();
-  const { isAuthorized } = useRequireAuth(['student']);
+   const { loading: authLoading } = useAuth();
+  const { isAuthorized, isAdmin, isSuperAdmin } = useRequireAuth(['student', 'admin', 'super_admin']);
 
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('government');
@@ -251,7 +251,7 @@ export default function StudentResultPage() {
       });
       const resp = await fetch(`/api/colleges/eligible?${params}`);
       if (resp.status === 403) {
-        throw new Error('Maximum college checks reached (10/10). Please contact support to increase your limit.');
+        throw new Error('Maximum rank checks reached (10/10). Please contact support to increase your limit.');
       }
       if (!resp.ok) throw new Error('Failed to retrieve college predictions.');
       return resp.json();

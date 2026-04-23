@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
 
     const user = await getUserById(uid);
 
-    if (!user || user.role !== 'student') {
-      return NextResponse.json({ error: 'Not a student' }, { status: 403 });
+    if (!user || !['student', 'admin', 'super_admin'].includes(user.role)) {
+      return NextResponse.json({ error: 'Unauthorized role' }, { status: 403 });
     }
 
     const student = await getStudentByUserId(uid);
@@ -47,14 +47,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const canLookup = await canPerformLookup(uid);
-
-    if (!canLookup) {
-      return NextResponse.json(
-        { error: `Maximum college checks reached (${MAX_COLLEGE_CHECKS}/${MAX_COLLEGE_CHECKS}). Please contact support to increase your limit.` },
-        { status: 403 }
-      );
-    }
+    // We no longer block lookups here. Limits are only enforced when SAVING a new rank in the profile API.
+    // This provides "Unlimited preference checks for 1 rank".
 
     const searchParams = request.nextUrl.searchParams;
     const collegeType = searchParams.get('type') as CollegeType | null;
@@ -73,8 +67,8 @@ export async function GET(request: NextRequest) {
 
     const isFirstLookup = searchParams.get('track') === 'true';
 
-    if (isFirstLookup) {
-      await incrementChecksUsed(uid);
+    // Only create leads for actual students, not admins
+    if (isFirstLookup && user.role === 'student') {
       const firstName = user?.firstName || '';
       const lastName = user?.lastName || '';
       let studentName = `${firstName} ${lastName}`.trim();

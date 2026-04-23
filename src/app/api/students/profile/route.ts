@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
-import { createStudent, getStudentByUserId, updateStudent, getRemainingChecks } from '@/lib/services/students';
+import { createStudent, getStudentByUserId, updateStudent, getRemainingChecks, canPerformLookup, incrementChecksUsed } from '@/lib/services/students';
 import { getUserById } from '@/lib/services/users';
 import { CreateStudentInput } from '@/types';
 
@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
 
     const user = await getUserById(uid);
 
-    if (!user || user.role !== 'student') {
-      return NextResponse.json({ error: 'Not a student' }, { status: 403 });
+    if (!user || !['student', 'admin', 'super_admin'].includes(user.role)) {
+      return NextResponse.json({ error: 'Unauthorized Role' }, { status: 403 });
     }
 
     const student = await getStudentByUserId(uid);
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
 
     const user = await getUserById(uid);
 
-    if (!user || user.role !== 'student') {
-      return NextResponse.json({ error: 'Not a student' }, { status: 403 });
+    if (!user || !['student', 'admin', 'super_admin'].includes(user.role)) {
+      return NextResponse.json({ error: 'Unauthorized role' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -89,9 +89,11 @@ export async function POST(request: NextRequest) {
       referralCode,
     } = body;
 
-    if (!rank || !yearOfPassing || !category || !gender || !counsellingType || !preferredBranch) {
+    const rankNum = rank ? parseInt(rank.toString()) : 0;
+
+    if (!rankNum || !yearOfPassing || !category || !gender || !counsellingType || !preferredBranch) {
       const missing = [];
-      if (!rank) missing.push('rank');
+      if (!rankNum) missing.push('rank');
       if (!category) missing.push('category');
       if (!gender) missing.push('gender');
       
@@ -102,29 +104,28 @@ export async function POST(request: NextRequest) {
 
     const existingStudent = await getStudentByUserId(uid);
 
-    if (existingStudent) {
-      await updateStudent(uid, {
-        score: score ? parseInt(score.toString()) : 0,
-        rank,
-        yearOfPassing,
-        category,
-        gender,
-        institution: institution || '',
-        domicileState: domicileState || '',
-        counsellingType,
-        preferredBranch,
-        locationPreference1: locationPreference1 || '',
-        locationPreference2: locationPreference2 || '',
-        locationPreference3: locationPreference3 || '',
-        referralCode: referralCode || '',
-      });
+    // Usage tracking logic
+    if (user.role === 'student') {
+      const isNewStudent = !existingStudent;
+      const rankChanged = existingStudent && existingStudent.rank !== rankNum;
 
-      return NextResponse.json({ success: true, message: 'Profile updated' });
+      /* 
+      if (isNewStudent || rankChanged) {
+        const canLookup = await canPerformLookup(uid);
+        if (!canLookup) {
+          return NextResponse.json(
+            { error: 'Maximum rank checks reached (10/10). Please contact support to increase your limit.' },
+            { status: 403 }
+          );
+        }
+        await incrementChecksUsed(uid);
+      }
+      */
     }
 
-    const studentInput: CreateStudentInput = {
+    const studentData = {
       score: score ? parseInt(score.toString()) : 0,
-      rank,
+      rank: rankNum,
       yearOfPassing,
       category,
       gender,
@@ -138,7 +139,12 @@ export async function POST(request: NextRequest) {
       referralCode: referralCode || '',
     };
 
-    const student = await createStudent(uid, studentInput);
+    if (existingStudent) {
+      await updateStudent(uid, studentData);
+      return NextResponse.json({ success: true, message: 'Profile updated' });
+    }
+
+    const student = await createStudent(uid, studentData);
 
     return NextResponse.json({
       success: true,

@@ -86,7 +86,7 @@ export const INDIAN_STATES = [
 ] as const;
 
 
-export const MAX_COLLEGE_CHECKS = 10;
+export const MAX_COLLEGE_CHECKS = 99999999999999999;
 export const DEFAULT_MAX_ACTIVE_LEADS = 50;
 
 export const AVAILABLE_YEARS = [2023, 2024, 2025] as const;

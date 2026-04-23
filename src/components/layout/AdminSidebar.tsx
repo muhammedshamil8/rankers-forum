@@ -10,6 +10,7 @@ import {
   UserCog,
   UserCircle,
   LogOut,
+  Search,
 } from 'lucide-react';
 import { useAuth } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
@@ -22,12 +23,14 @@ const superAdminLinks = [
   { href: '/super-admin/colleges', label: 'College', icon: Building2 },
   { href: '/super-admin/referral-codes', label: 'Referral Codes', icon: GraduationCap }, 
   { href: '/super-admin/admins', label: 'Admin', icon: UserCog },
+  { href: '/admin/rank-predictor', label: 'Rank Predictor', icon: Search },
   { href: '/super-admin/profile', label: 'Profile', icon: UserCircle },
 ];
 
 const adminLinks = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/leads', label: 'Leads', icon: Users },
+  { href: '/admin/rank-predictor', label: 'Rank Predictor', icon: Search },
 ];
 
 interface AdminSidebarProps {

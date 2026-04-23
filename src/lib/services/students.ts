@@ -3,6 +3,7 @@ import { StudentModel } from '@/models/Student';
 import { DashboardStatsModel } from '@/models/Stats';
 import { Student, CreateStudentInput } from '@/types';
 import { MAX_COLLEGE_CHECKS } from '../constants';
+import { getUserById } from './users';
 
 /**
  * Helper to map Mongoose document to frontend Student interface
@@ -85,24 +86,39 @@ export async function updateStudent(
 
 export async function incrementChecksUsed(userId: string): Promise<boolean> {
   await dbConnect();
+  
+  const user = await getUserById(userId);
+  if (user && (user.role === 'admin' || user.role === 'super_admin')) {
+    return true; // Admins have unlimited checks
+  }
+
   const student = await StudentModel.findOne({ userId });
   
   if (!student) {
     throw new Error('Student not found');
   }
   
+  /* 
   if (student.checksUsed >= MAX_COLLEGE_CHECKS) {
     return false;
   }
   
   student.checksUsed += 1;
   await student.save();
+  */
   return true;
 }
 
 
 export async function canPerformLookup(userId: string): Promise<boolean> {
   await dbConnect();
+  
+  const user = await getUserById(userId);
+  if (user && (user.role === 'admin' || user.role === 'super_admin')) {
+    return true; // Admins can always perform lookup
+  }
+
+  /*
   const student = await StudentModel.findOne({ userId });
   
   if (!student) {
@@ -110,6 +126,8 @@ export async function canPerformLookup(userId: string): Promise<boolean> {
   }
   
   return student.checksUsed < MAX_COLLEGE_CHECKS;
+  */
+  return true; // Bypass all limit checks
 }
 
 
